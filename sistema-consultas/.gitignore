@@ -1,0 +1,10 @@
+src/.env
+src/config/db_sistema_consultas.sql
+.phpintel/*
+.vscode/*
+src/services/relatorios/relatorios/*
+# Certificados
+src/config/*.pfx
+src/config/*.p12
+src/config/*.pem
+src/.env

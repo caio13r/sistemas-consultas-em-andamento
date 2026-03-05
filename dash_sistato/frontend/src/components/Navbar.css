@@ -1,0 +1,35 @@
+.navbar {
+  background-color: #fff; /* Cor de fundo branca */
+  color: #333; /* Cor do texto */
+  padding: 15px 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Sombra suave */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px; /* Altura da navbar */
+  position: fixed; /* Fixa a navbar */
+  top: 0;
+  left: 200px; /* Desloca para a direita pela largura da sidebar */
+  right: 0;
+  z-index: 10; /* Garante que a navbar esteja acima do conteúdo */
+}
+
+.navbar .search-bar input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.navbar .search-bar button {
+  padding: 10px 15px;
+  background-color: #C0392B; /* Cor do botão vermelha */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.navbar .user-info {
+  font-weight: bold;
+} 

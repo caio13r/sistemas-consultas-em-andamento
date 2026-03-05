@@ -1,0 +1,30 @@
+name: Deploy test
+
+on:
+  push:
+    branches:
+      - test
+
+jobs:
+  build-and-deploy:
+    runs-on: test-consult
+    steps:
+      - name: Pull latest changes from the repository
+        run: |
+          git pull
+        working-directory: ${{ secrets.LOCAL_REPOSITORY_TEST }}   
+      
+      - name: Build Docker images
+        run: |
+          docker-compose build
+        working-directory: ${{ secrets.LOCAL_REPOSITORY_TEST }}     
+  
+      - name: Stop and remove old containers
+        run: |
+          docker-compose down
+        working-directory: ${{ secrets.LOCAL_REPOSITORY_TEST }}   
+  
+      - name: Deploy application
+        run: |
+          docker-compose up -d
+        working-directory: ${{ secrets.LOCAL_REPOSITORY_TEST }}

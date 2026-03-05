@@ -1,0 +1,29 @@
+{
+    "name": "cfo/sistema-consultas",
+    "description": "sistema de consultas do cfo",
+    "type": "project",
+    "autoload": {
+        "files": ["./config/config.php"],
+        "psr-4": {
+            "Cfo\\SisConsultas\\": ""
+        }
+    },
+    "authors": [
+        {
+            "name": "Matheus Sesso",
+            "email": "matheus.sesso@cfo.org.br"
+        }
+    ],
+    "require": {
+        "phpoffice/phpspreadsheet": "^1.23",
+        "ext-gd": "*",
+        "phpmailer/phpmailer": "^6.8",
+        "steampixel/simple-php-router": "^0.7.1",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "config": {
+        "platform": {
+            "php": "8.3"
+        }
+    }
+}

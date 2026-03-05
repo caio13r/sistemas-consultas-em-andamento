@@ -1,0 +1,24 @@
+# Credenciais e segredos
+docs/cred.md
+*.env
+.env.*
+!.env.sample
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependências (instaláveis via composer/npm)
+node_modules/
+dash_sistato/frontend/node_modules/
+sistema-consultas/src/vendor/
+
+# Assets terceiros (Font Awesome - reinstalável)
+sistema-consultas/src/public/assets/fontawesome/
