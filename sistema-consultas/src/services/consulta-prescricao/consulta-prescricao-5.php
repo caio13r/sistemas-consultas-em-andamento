@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RP1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RP1acesso']) && $row['RP1acesso'] == false)) {
     echo "<script language='javascript'>
   window.alert('Você não tem permissão para acessar essa página.')
   window.location.href='consulta-identidade';
@@ -37,7 +37,9 @@ try {
     $stmt->execute();
     $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("Erro consulta prescricao-5: " . $error->getMessage());
+    echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+    $result = [];
 }
 
 if (count($result) > 0) {
@@ -72,12 +74,12 @@ if (count($result) > 0) {
                     <?php
                     foreach ($result as $row) {
                         echo "<tr>";
-                        echo "<td>" . $row['uf'] . "</td>";
-                        echo "<td>" . $row['insc'] . "</td>";
-                        echo "<td>" . $row['cd_nome'] . "</td>";
-                        echo "<td>" . $row['paciente_nome'] . "</td>";
-                        echo "<td>" . $row['id'] . "</td>";
-                        echo "<td>" . $row['tipo'] . "</td>";
+                        echo "<td>" . htmlspecialchars($row['uf']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['insc']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['cd_nome']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['paciente_nome']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['id']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['tipo']) . "</td>";
                         echo "<td>" . date('d-m-Y H:i', strtotime($row['data'])) . "</td>";
                         echo "</tr>";
                     }

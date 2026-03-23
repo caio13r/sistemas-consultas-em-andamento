@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE1acesso']) && $row['CE1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -37,7 +37,7 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
                     <option style="font-weight: bold;" disabled><b>Estados:</b></option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CE1select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CE1select']) && $row['CE1select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                           if ($val != 'ALL') {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
@@ -87,14 +87,28 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $croCondition = "";
+    $croParam = null;
     if ($inputPost["cro"] === 'ALL') {
-        $croTable = "UF <> 'BR' AND UF <> 'RG'";
+        $croCondition = "UF <> 'BR' AND UF <> 'RG'";
     } elseif ($inputPost["cro"] === 'BR') {
-        $croTable = "UF = 'BR'";
+        $croCondition = "UF = 'BR'";
     } elseif ($inputPost["cro"] === 'RG' || $inputPost["cro"] === null) {
-        $croTable = "UF = 'RG'";
+        $croCondition = "UF = 'RG'";
     } else {
-        $croTable = "UF = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croCondition = "UF = :cro";
+        $croParam = $inputPost["cro"];
+    }
+
+    if ($inputPost["categoria"] !== 'ALL' && $inputPost["categoria"] !== null) {
+        if (!array_key_exists($inputPost["categoria"], Helper::$catListPf)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Categoria inválida.</div>";
+            return;
+        }
     }
 
     if ($inputPost["categoria"] === 'ALL' || $inputPost["categoria"] === null) {
@@ -113,12 +127,15 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
         $db = Database3::getInstance();
         $con = $db->getConnection();
 
-        $query = "SELECT REGIAO, UF, POPULACAO, $catTable FROM CFO_CWS.dbo.vw_Cons_Dados_Somados_Populacao WHERE $croTable";
+        $query = "SELECT REGIAO, UF, POPULACAO, $catTable FROM CFO_CWS.dbo.vw_Cons_Dados_Somados_Populacao WHERE $croCondition";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 
     $totalFemCd = array_sum(array_column($result, 'CD_FEM'));
@@ -208,11 +225,11 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
                             <th scope="col">TSB FEM</th>
                             <th scope="col">TOTAL FEM</th>
                     <?php } } else { ?>
-                        <th scope="col"><?= $inputPost["categoria"] ?> FEMININO</th>
-                        <th scope="col"><?= $inputPost["categoria"] ?> MASCULINO</th>
-                        <th scope="col"><?= $inputPost["categoria"] ?> GERAL</th>
-                        <th scope="col">% de <?= $inputPost["categoria"] ?></th>
-                        <th scope="col">Habitantes por <?= $inputPost["categoria"] ?></th>
+                        <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> FEMININO</th>
+                        <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> MASCULINO</th>
+                        <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> GERAL</th>
+                        <th scope="col">% de <?= htmlspecialchars($inputPost["categoria"]) ?></th>
+                        <th scope="col">Habitantes por <?= htmlspecialchars($inputPost["categoria"]) ?></th>
                     <?php } ?>
                 </tr>
             </thead>
@@ -222,8 +239,8 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
                     if ($inputPost["sexo"] === 'ALL' || $inputPost["sexo"] === null) {
                         foreach ($result as $row) {
                             echo "<tr>";
-                            echo "<td>" . $row['UF'] . "</td>";
-                            echo "<td>" . $row['REGIAO'] . "</td>";
+                            echo "<td>" . htmlspecialchars($row['UF']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['REGIAO']) . "</td>";
                             echo "<td>" . number_format($row['POPULACAO'], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["CD_FEM"], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["CD_MAS"], 0, ',', '.') . "</td>";
@@ -263,8 +280,8 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
                     } elseif ($inputPost["sexo"] === 'FEM') {
                         foreach ($result as $row) {
                             echo "<tr>";
-                            echo "<td>" . $row['UF'] . "</td>";
-                            echo "<td>" . $row['REGIAO'] . "</td>";
+                            echo "<td>" . htmlspecialchars($row['UF']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['REGIAO']) . "</td>";
                             echo "<td>" . number_format($row['POPULACAO'], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["CD_FEM"], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["APD_FEM"], 0, ',', '.') . "</td>";
@@ -290,8 +307,8 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
                     } elseif ($inputPost["sexo"] === 'MAS') {
                         foreach ($result as $row) {
                             echo "<tr>";
-                            echo "<td>" . $row['UF'] . "</td>";
-                            echo "<td>" . $row['REGIAO'] . "</td>";
+                            echo "<td>" . htmlspecialchars($row['UF']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['REGIAO']) . "</td>";
                             echo "<td>" . number_format($row['POPULACAO'], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["CD_MAS"], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["APD_MAS"], 0, ',', '.') . "</td>";
@@ -327,8 +344,8 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
                             $HabProf = $row['POPULACAO']/$totalProf;
 
                             echo "<tr>";
-                            echo "<td>" . $row['UF'] . "</td>";
-                            echo "<td>" . $row['REGIAO'] . "</td>";
+                            echo "<td>" . htmlspecialchars($row['UF']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['REGIAO']) . "</td>";
                             echo "<td>" . number_format($row['POPULACAO'], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["$catFem"], 0, ',', '.') . "</td>";
                             echo "<td>" . number_format($row["$catMas"], 0, ',', '.') . "</td>";
@@ -399,7 +416,7 @@ $tituloConsulta = 'Inscritos x Categoria x População x Sexo';
             <?php } else { ?>
 
             const data = {
-                labels: ['<?= $inputPost["categoria"] . ' FEMININO' ?>', '<?= $inputPost["categoria"] . ' MASCULINO' ?>', '<?= $inputPost["categoria"] . ' GERAL' ?>'],
+                labels: ['<?= htmlspecialchars($inputPost["categoria"]) . ' FEMININO' ?>', '<?= htmlspecialchars($inputPost["categoria"]) . ' MASCULINO' ?>', '<?= htmlspecialchars($inputPost["categoria"]) . ' GERAL' ?>'],
                 datasets: [
                     {
                     label: 'Profissionais',

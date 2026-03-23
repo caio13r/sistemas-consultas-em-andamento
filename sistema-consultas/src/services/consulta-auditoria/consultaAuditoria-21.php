@@ -1,19 +1,22 @@
-<?php 
+<?php
+use PDO;
+use PDOException;
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CA17acesso'] == false) {
-    echo "<script language='javascript'>
-    window.alert('Você não tem permissão para acessar essa página.')
+if (Session::get('grupo') != 0 && isset($row['CA17acesso']) && $row['CA17acesso'] == false) {
+    echo "<script>
+    window.alert('Você não tem permissão para acessar essa página.');
     window.location.href='consulta-auditoria';
     </script>";
     exit;
 }
 
 $tituloConsulta = 'Auditoria - Pessoas com DDA';
+$allowedCategorias = ['APD', 'ASB', 'CD', 'TPD', 'TSB'];
 ?>
 
 <div class="col-md-8 offset-md-2 mb-4">
@@ -27,26 +30,25 @@ $tituloConsulta = 'Auditoria - Pessoas com DDA';
                     <option value='BR'>Brasil</option>
                     <option value='ALL'>Todos</option>
                     <?php
-                      // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CF3select'] == true) {
-                        foreach(Helper::$ufList as $val => $value) {
+                      if (Session::get('grupo') === 0 || (isset($row['CF3select']) && $row['CF3select'] == true)) {
+                        foreach (Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
-                        }            
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
+                        }
                       } else {
-                            foreach(Helper::$ufList as $val => $value) {
-                                if ($users->CheckGroupUf() == $val) {
-                                    $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                                    echo "<option value='$val' $selected>$value</option>";
-                                }
+                        foreach (Helper::$ufList as $val => $value) {
+                            if ($users->CheckGroupUf() == $val) {
+                                $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
+                                echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
                             }
                         }
+                      }
                     ?>
                 </select>
             </div>
             <div class="form-group col-md-4">
                 <label for="categoria">Selecione a Categoria:</label>
-                <select id="categoria" name="categoria" class="form-control" value="<?= $dados["categoria"] ?>">
+                <select id="categoria" name="categoria" class="form-control">
                     <option disabled selected value>Selecione</option>
                     <option value='ALL'>Todos</option>
                     <option value='APD'>APD</option>
@@ -61,51 +63,73 @@ $tituloConsulta = 'Auditoria - Pessoas com DDA';
     </form>
 </div>
 
-<?php if (isset($inputPost["submit"])) { 
+<?php
+    if (isset($inputPost["submit"])) {
+        $erro = '';
+        $conditions = [];
+        $params = [];
 
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croWhere = "CRO IS NOT NULL";
-    } else {
-        $croWhere = "CRO LIKE '{$inputPost["cro"]}'";
-    }
+        $allowedCro = array_merge(array_keys(Helper::$ufList), ['BR']);
 
-    if ($inputPost["categoria"] === 'ALL' || $inputPost["categoria"] === null) {
-        $catWhere = "Categoria IS NOT NULL";
-    } else {
-        $catWhere = "Categoria LIKE '{$inputPost["categoria"]}'";
-    }
+        if (!empty($inputPost['cro']) && $inputPost['cro'] !== 'ALL') {
+            if (!in_array($inputPost['cro'], $allowedCro)) {
+                $erro = "Estado inválido.";
+            } else {
+                $conditions[] = "CRO = :cro";
+                $params[':cro'] = $inputPost['cro'];
+            }
+        }
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
+        if (!empty($inputPost['categoria']) && $inputPost['categoria'] !== 'ALL') {
+            if (!in_array($inputPost['categoria'], $allowedCategorias)) {
+                $erro = "Categoria inválida.";
+            } else {
+                $conditions[] = "Categoria = :cat";
+                $params[':cat'] = $inputPost['categoria'];
+            }
+        }
 
-        $query = "SELECT
-                    TOP 2000
-                    CRO,
-                    Categoria,
-                    Inscricao,
-                    Nome,
-                    CPF,
-                    Tipo_Inscricao,
-                    Situacao,
-                    Detalhe,
-                    DDA
-                FROM CFO_CWS.dbo.vw_Cons_Pessoas_Com_DDA
-                WHERE $croWhere AND $catWhere
-                ORDER BY CRO, Categoria, Nome";
-        $stmt = $con->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
-    }
+        $whereClause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
+        $result = [];
+
+        if (empty($erro)) {
+            try {
+                $con = Database3::getInstance()->getConnection();
+                $query = "SELECT
+                            TOP 2000
+                            CRO,
+                            Categoria,
+                            Inscricao,
+                            Nome,
+                            CPF,
+                            Tipo_Inscricao,
+                            Situacao,
+                            Detalhe,
+                            DDA
+                        FROM CFO_CWS.dbo.vw_Cons_Pessoas_Com_DDA
+                        $whereClause
+                        ORDER BY CRO, Categoria, Nome";
+                $stmt = $con->prepare($query);
+                foreach ($params as $key => $value) {
+                    $stmt->bindValue($key, $value);
+                }
+                $stmt->execute();
+                $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $error) {
+                error_log("Erro em auditoria 21: " . $error->getMessage());
+                echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> Não foi possível realizar a consulta.</div>";
+                $result = [];
+            }
+        } else {
+            echo "<div class='alert alert-warning mt-3'><strong>Atenção!</strong> " . htmlspecialchars($erro) . "</div>";
+        }
 ?>
 
 <?php if (!empty($result)) { ?>
     <div class="row justify-content-end mr-1">
         <form action="ExcelDownload" method="post">
-            <input type="hidden" name="tituloConsulta" value="<?= $tituloConsulta ?>">
-            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)); ?>">
+            <input type="hidden" name="tituloConsulta" value="<?= htmlspecialchars($tituloConsulta) ?>">
+            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)) ?>">
             <button type="submit" name="ExcelDownload" class="btn btn-md btn-success">Excel</button>
         </form>
     </div>
@@ -113,7 +137,7 @@ $tituloConsulta = 'Auditoria - Pessoas com DDA';
 
 <div id="tableResult" class="row mt-4">
     <div class="col table-responsive">
-        <table id="tabelaConsultas21" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
+        <table id="tabelaAuditoria21" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
             <thead>
                 <tr>
                     <th scope="col">CRO</th>
@@ -128,38 +152,34 @@ $tituloConsulta = 'Auditoria - Pessoas com DDA';
                 </tr>
             </thead>
             <tbody>
-            <?php
-                foreach ($result as $row) {
-                    echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Categoria'] . "</td>";
-                    echo "<td>" . $row['Inscricao'] . "</td>";
-                    echo "<td>" . $row['Nome'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['Tipo_Inscricao'] . "</td>";
-                    echo "<td>" . $row['Situacao'] . "</td>";
-                    echo "<td>" . $row['Detalhe'] . "</td>";
-                    echo "<td>" . $row['DDA'] . "</td>";
-                    echo "</tr>";
-                }
-            ?>
+            <?php foreach ($result as $linha) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($linha['CRO'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Categoria'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Inscricao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Nome'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['CPF'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Tipo_Inscricao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Situacao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Detalhe'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['DDA'] ?? '') ?></td>
+                </tr>
+            <?php endforeach; ?>
             </tbody>
         </table>
-    </div>  
+    </div>
 </div>
 
-<!-- Incluindo os scripts necessários para o DataTables funcionar corretamente -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $('#tabelaConsultas21').DataTable({
-            "paging": true,
-            "lengthMenu": [10, 25, 50, 100],
-            "language": {
-            "url": "../assets/lang/pt-BR.json" // Caminho local para o arquivo de tradução
+$(document).ready(function() {
+    $('#tabelaAuditoria21').DataTable({
+        "paging": true,
+        "lengthMenu": [10, 25, 50, 100],
+        "language": {
+            "url": "../assets/lang/pt-BR.json"
         }
-            
-        });
     });
+});
 </script>
+
 <?php } ?>

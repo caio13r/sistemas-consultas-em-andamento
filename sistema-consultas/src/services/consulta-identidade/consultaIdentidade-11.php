@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI1acesso']) && $row['CI1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-identidade';
@@ -51,7 +51,9 @@ $tituloConsulta = "Auditoria - Total de Identidades Emitidas Consolidado por CRO
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOexception $error) {
             // echo $query;
-            die("Erro ao retornar os dados: " . $error->getMessage());
+            error_log("Erro ao retornar os dados: " . $error->getMessage());
+            echo "<div class='alert alert-danger'>Erro ao retornar os dados.</div>";
+            return;
         }
 
         $totalCD = array_sum(array_column($result, 'CD'));
@@ -90,7 +92,7 @@ $tituloConsulta = "Auditoria - Total de Identidades Emitidas Consolidado por CRO
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
                     echo "<td>" . number_format($row['CD'], 0, ',', '.') . "</td>";
                     echo "<td>" . number_format($row['TSB'], 0, ',', '.') . "</td>";
                     echo "<td>" . number_format($row['ASB'], 0, ',', '.') . "</td>";

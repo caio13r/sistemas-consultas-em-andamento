@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF9acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF9acesso']) && $row['CF9acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -47,6 +47,10 @@ $tituloConsulta = 'Estatísticas de Quantidade de Fiscais';
 
 <?php if (isset($inputPost["submit"])) { 
     $croValue = $inputPost["cro"] ?? 'ALL';
+    if ($croValue !== 'ALL' && $croValue !== 'Brasil' && !array_key_exists($croValue, Helper::$ufList)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+        return;
+    }
     $script = "DECLARE @CRO_UF VARCHAR(6) = '{$croValue}'; ";
 
     $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao9.sql";
@@ -66,7 +70,9 @@ $tituloConsulta = 'Estatísticas de Quantidade de Fiscais';
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -93,8 +99,8 @@ $tituloConsulta = 'Estatísticas de Quantidade de Fiscais';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Qtd_Fiscais'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Qtd_Fiscais']) . "</td>";
                     echo "</tr>";
                 }
             ?>

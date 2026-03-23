@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE10acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE10acesso']) && $row['CE10acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -45,12 +45,16 @@ $tituloConsulta = 'Totalização de Ativos por Localidade';
 
 <?php if (isset($inputPost["submit"])) { 
 
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
+    if ($inputPost["cro"] === 'ALL' || empty($inputPost["cro"])) {
         $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaEstatistica/consultaEstatistica10_br.sql";
         $myfile = fopen($path, "r") or die("Unable to open file!");
         $script .= fread($myfile,filesize($path));
         fclose($myfile);
     } else {
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
         $script = "DECLARE @CRO_UF VARCHAR(2) = '{$inputPost["cro"]}'; ";
 
         $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaEstatistica/consultaEstatistica10_uf.sql";
@@ -67,7 +71,9 @@ $tituloConsulta = 'Totalização de Ativos por Localidade';
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -104,9 +110,9 @@ $tituloConsulta = 'Totalização de Ativos por Localidade';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['UF'] . "</td>";
-                    echo "<td>" . $row['LOCALIDADE (END. CORRESPONDENCIA)'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['UF']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['LOCALIDADE (END. CORRESPONDENCIA)']) . "</td>";
                     echo "<td>" . $row['CD'] . "</td>";
                     echo "<td>" . $row['TPD'] . "</td>";
                     echo "<td>" . $row['TSB'] . "</td>";

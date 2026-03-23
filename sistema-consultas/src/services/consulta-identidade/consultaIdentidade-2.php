@@ -6,17 +6,17 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI2acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI2acesso']) && $row['CI2acesso'] == false)) {
     echo "<script>alert('Você não tem permissão para acessar essa página.');window.location.href='consulta-identidade';</script>";
     exit;
 }
 
 
 
-$tipoConsulta = $_GET['tipoConsulta'] ?? '';
-$uf = $_GET['uf'] ?? '';
-$categoria = $_GET['categoria'] ?? '';
-$inscricao = $_GET['inscricao'] ?? '';
+$tipoConsulta = $inputGet['tipoConsulta'] ?? '';
+$uf = $inputGet['uf'] ?? '';
+$categoria = $inputGet['categoria'] ?? '';
+$inscricao = $inputGet['inscricao'] ?? '';
 $token = $_ENV['API_TOKEN'] ?? null;
 
 $codigoUF = [
@@ -113,7 +113,7 @@ if (!empty($uf) && !empty($categoria) && !empty($inscricao)) {
         echo "<table class='table table-sm table-bordered table-striped'>";
         echo "<thead><tr><th>Data</th><th>Detalhes</th></tr></thead><tbody>";
         foreach ($data['descarte'] as $desc) {
-            echo "<tr><td>{$desc['create_at']}</td><td>{$desc['detail']}</td></tr>";
+            echo "<tr><td>" . htmlspecialchars($desc['create_at'] ?? '') . "</td><td>" . htmlspecialchars($desc['detail'] ?? '') . "</td></tr>";
         }
         echo "</tbody></table></div></div>";
     } elseif ($data['descarte'] === "Nenhuma situação encontrada") {

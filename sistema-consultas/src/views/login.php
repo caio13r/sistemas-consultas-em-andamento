@@ -45,7 +45,8 @@ if (isset($logout)) {
                         <div class="col-lg-6">
                             <div class="p-5">
                                 <div class="text-center">
-                                    <h1 class="h4 text-gray-900 mb-4">Faça seu login!</h1>
+                                    <h1 class="h4 text-gray-900 mb-1">Sistema Consultas</h1>
+                                    <p class="text-muted mb-4" style="font-size:0.88rem;">Faça login para continuar</p>
                                 </div>
                                 <?php 
                                     if (isset($userLog)) {
@@ -62,7 +63,7 @@ if (isset($logout)) {
                                         <input type="password" name="password" class="form-control" placeholder="Insira sua senha">
                                     </div>
                                     <div class="form-group">
-                                        <button type="submit" name="login" class="btn btn-success">Fazer login</button>
+                                        <button type="submit" name="login" class="btn btn-primary btn-block">Entrar</button>
                                     </div>
                                 </form>
                                 <div class="text-center mt-4">

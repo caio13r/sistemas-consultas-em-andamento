@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 Session::CheckSession();
 
 // Verificação de acesso
-if ((Session::get('grupo') != 0 && $row['CI9acesso'] == false) || (Session::get('grupo') != 0 && $row['CI7acesso'] == false)) {
+if ((Session::get('grupo') != 0 && (isset($row['CI9acesso']) && $row['CI9acesso'] == false)) || (Session::get('grupo') != 0 && (isset($row['CI7acesso']) && $row['CI7acesso'] == false))) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -18,7 +18,7 @@ if ((Session::get('grupo') != 0 && $row['CI9acesso'] == false) || (Session::get(
 $tituloConsulta = 'Gráficos e Consulta Identidade por Intervalo';
 
 // Verificar se um CRO foi selecionado
-$croSelecionado = isset($_POST['cro']) ? $_POST['cro'] : '';
+$croSelecionado = isset($inputPost['cro']) ? $inputPost['cro'] : '';
 
 // Lista de todos os estados brasileiros
 $estados = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
@@ -28,8 +28,8 @@ $data_inicio_default = date('Y-m-01');
 $data_fim_default = date('Y-m-t');
 
 // Define as datas para a pesquisa, usando os valores do POST se disponíveis, senão os valores padrão
-$data_inicio = isset($_POST['data_inicio']) ? $_POST['data_inicio'] : $data_inicio_default;
-$data_fim = isset($_POST['data_fim']) ? $_POST['data_fim'] : $data_fim_default;
+$data_inicio = isset($inputPost['data_inicio']) ? $inputPost['data_inicio'] : $data_inicio_default;
+$data_fim = isset($inputPost['data_fim']) ? $inputPost['data_fim'] : $data_fim_default;
 
 ?>
 
@@ -98,10 +98,14 @@ $data_fim = isset($_POST['data_fim']) ? $_POST['data_fim'] : $data_fim_default;
         $db = Database3::getInstance();
         $con = $db->getConnection();
 
-        // Construir a cláusula WHERE com base no CRO selecionado
         $whereClause = "";
         if (!empty($croSelecionado)) {
-            $whereClause = "WHERE CRO = '$croSelecionado'";
+            if (!in_array($croSelecionado, $estados)) {
+                echo "<div class='alert alert-danger'>Estado (CRO) inválido.</div>";
+                return;
+            }
+            $croSanitizado = $croSelecionado;
+            $whereClause = "WHERE CRO = '$croSanitizado'";
         }
 
         // Query SQL com o filtro do CRO
@@ -135,7 +139,7 @@ $data_fim = isset($_POST['data_fim']) ? $_POST['data_fim'] : $data_fim_default;
         echo "<tr style='background-color: #f2f2f2;'><th>CFO_ID</th><th>THOMAS</th><th>perc_prod</th><th>POSTADAS</th><th>perc_post</th><th>ENTREGUES</th><th>perc_entr</th><th>DEVOLVIDAS</th><th>perc_dev</th><th>EM_TRANSITO</th><th>perc_tram</th></tr>";
 
         foreach ($resultadoGrafico as $row) {
-            echo "<tr style='border: 1px solid #ddd; padding: 8px;'><td>{$row['CFO_ID']}</td><td>{$row['THOMAS']}</td><td>{$row['perc_prod']}%</td><td>{$row['POSTADAS']}</td><td>{$row['perc_post']}%</td><td>{$row['ENTREGUES']}</td><td>{$row['perc_entr']}%</td><td>{$row['DEVOLVIDAS']}</td><td>{$row['perc_dev']}%</td><td>{$row['EM_TRANSITO']}</td><td>{$row['perc_tram']}%</td></tr>";
+            echo "<tr style='border: 1px solid #ddd; padding: 8px;'><td>" . htmlspecialchars($row['CFO_ID'] ?? '') . "</td><td>" . htmlspecialchars($row['THOMAS'] ?? '') . "</td><td>" . htmlspecialchars($row['perc_prod'] ?? '') . "%</td><td>" . htmlspecialchars($row['POSTADAS'] ?? '') . "</td><td>" . htmlspecialchars($row['perc_post'] ?? '') . "%</td><td>" . htmlspecialchars($row['ENTREGUES'] ?? '') . "</td><td>" . htmlspecialchars($row['perc_entr'] ?? '') . "%</td><td>" . htmlspecialchars($row['DEVOLVIDAS'] ?? '') . "</td><td>" . htmlspecialchars($row['perc_dev'] ?? '') . "%</td><td>" . htmlspecialchars($row['EM_TRANSITO'] ?? '') . "</td><td>" . htmlspecialchars($row['perc_tram'] ?? '') . "%</td></tr>";
         }
 
         echo "</table><br><br>";
@@ -151,10 +155,10 @@ $data_fim = isset($_POST['data_fim']) ? $_POST['data_fim'] : $data_fim_default;
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 var dados = JSON.parse('<?php echo $dadosGrafico; ?>');
-                var thomas = '<?php echo $row['THOMAS']; ?>';
-                var postadas = '<?php echo $row['POSTADAS']; ?>';
-                var entregues = '<?php echo $row['ENTREGUES']; ?>';
-                var devolvidas = '<?php echo $row['DEVOLVIDAS']; ?>';
+                var thomas = '<?php echo htmlspecialchars($row['THOMAS'] ?? '', ENT_QUOTES); ?>';
+                var postadas = '<?php echo htmlspecialchars($row['POSTADAS'] ?? '', ENT_QUOTES); ?>';
+                var entregues = '<?php echo htmlspecialchars($row['ENTREGUES'] ?? '', ENT_QUOTES); ?>';
+                var devolvidas = '<?php echo htmlspecialchars($row['DEVOLVIDAS'] ?? '', ENT_QUOTES); ?>';
                 var em_transito = postadas - entregues - devolvidas;
 
                 var ctx = document.getElementById('meuGrafico').getContext('2d');

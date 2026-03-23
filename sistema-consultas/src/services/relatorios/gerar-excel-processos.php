@@ -28,8 +28,9 @@ $users = new Users(); // Instancia Users para log de acesso
 error_log(">>> INÍCIO DO SCRIPT gerar-excel-processos.php - " . date('Y-m-d H:i:s'));
 error_log(">>> POST DATA recebida: " . print_r($_POST, true));
 
-// Validação dos parâmetros necessários
-if (!isset($_POST['data_inicial']) || !isset($_POST['data_final']) || !isset($_POST['estado']) || !isset($_POST['etapa'])) {
+$inputPost = $_POST;
+
+if (!isset($inputPost['data_inicial']) || !isset($inputPost['data_final']) || !isset($inputPost['estado']) || !isset($inputPost['etapa'])) {
     error_log(">>> ERRO: Parâmetros obrigatórios ausentes para geração do Excel.");
     // Limpa o buffer de saída antes de qualquer saída HTTP
     if (ob_get_length()) { ob_clean(); }
@@ -40,10 +41,10 @@ if (!isset($_POST['data_inicial']) || !isset($_POST['data_final']) || !isset($_P
     exit;
 }
 
-$data_inicial = $_POST['data_inicial'];
-$data_final = $_POST['data_final'];
-$estado = $_POST['estado'];
-$etapa = $_POST['etapa'];
+$data_inicial = $inputPost['data_inicial'];
+$data_final = $inputPost['data_final'];
+$estado = $inputPost['estado'];
+$etapa = $inputPost['etapa'];
 
 try {
     // Obtém a conexão com o banco de dados

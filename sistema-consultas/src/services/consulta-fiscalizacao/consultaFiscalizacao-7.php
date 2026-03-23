@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF7acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF7acesso']) && $row['CF7acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -26,7 +26,7 @@ $tituloConsulta = 'Estatísticas de Coordenadores de Fiscalização';
                     <option disabled selected value>Selecione</option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CF6select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CF6select']) && $row['CF6select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -49,10 +49,17 @@ $tituloConsulta = 'Estatísticas de Coordenadores de Fiscalização';
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $croParam = null;
+
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
         $croWhere = " and uf IS NOT NULL";
     } else {
-        $croWhere = " and uf = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croWhere = " and uf = :cro";
+        $croParam = $inputPost["cro"];
     }
 
     try {
@@ -66,11 +73,13 @@ $tituloConsulta = 'Estatísticas de Coordenadores de Fiscalização';
                     AND tb_u.isActive = 1";
 
         $stmt = $con->prepare($query.$croWhere);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        // echo $query . "<br>";
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -100,11 +109,11 @@ $tituloConsulta = 'Estatísticas de Coordenadores de Fiscalização';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['uf'] . "</td>";
-                    echo "<td>" . $row['name'] . "</td>";
-                    echo "<td>" . $row['email'] . "</td>";
-                    echo "<td>" . Helper::formatarTelefone($row['telefoneCtt']) . "</td>";
-                    echo "<td>" . Helper::formatarTelefone($row['telefoneWpp']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['uf']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['name']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['email']) . "</td>";
+                    echo "<td>" . htmlspecialchars(Helper::formatarTelefone($row['telefoneCtt'])) . "</td>";
+                    echo "<td>" . htmlspecialchars(Helper::formatarTelefone($row['telefoneWpp'])) . "</td>";
                     echo "</tr>";
                 }
             ?>

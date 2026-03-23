@@ -94,15 +94,16 @@ try {
         }
     }
     
-    // Tentar via POST também
-    if (!$uf && isset($_POST['uf'])) {
-        $uf = $_POST['uf'];
+    $inputPost = $_POST;
+    $inputGet = $_GET;
+
+    if (!$uf && isset($inputPost['uf'])) {
+        $uf = $inputPost['uf'];
         logInfo("UF recebida via POST: $uf");
     }
     
-    // Tentar via GET (para compatibilidade)
-    if (!$uf && isset($_GET['uf'])) {
-        $uf = $_GET['uf'];
+    if (!$uf && isset($inputGet['uf'])) {
+        $uf = $inputGet['uf'];
         logInfo("UF recebida via GET: $uf");
     }
 
@@ -198,9 +199,7 @@ try {
     
     retornarJSON([
         'success' => false,
-        'message' => $e->getMessage(),
-        'file' => basename($e->getFile()),
-        'line' => $e->getLine()
+        'message' => 'Erro ao processar a requisição.'
     ]);
 } catch (Error $e) {
     $errorMsg = "ERRO FATAL: " . $e->getMessage() . " em " . $e->getFile() . ":" . $e->getLine();
@@ -208,9 +207,7 @@ try {
     
     retornarJSON([
         'success' => false,
-        'message' => $e->getMessage(),
-        'file' => basename($e->getFile()),
-        'line' => $e->getLine()
+        'message' => 'Erro interno do servidor.'
     ]);
 }
 ?> 

@@ -27,7 +27,7 @@ ini_set('post_max_size', '100M');
 ini_set('upload_max_filesize', '100M');
 
 // Verificar se há mensagem de sucesso na URL
-if (isset($_GET['success']) && $_GET['success'] == 1) {
+if (isset($inputGet['success']) && $inputGet['success'] == 1) {
     $success_message = 'Registro inserido com sucesso!';
 }
 
@@ -49,7 +49,11 @@ try {
     $total_geral = count($todos_despachos);
     
 } catch (PDOException $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("consultaIdentidade-22: Erro ao retornar os dados: " . $error->getMessage());
+    $error_message = "Erro ao carregar os dados. Tente novamente mais tarde.";
+    $todos_despachos = [];
+    $contagem_estados = [];
+    $total_geral = 0;
 }
 ?>
 <!DOCTYPE html>

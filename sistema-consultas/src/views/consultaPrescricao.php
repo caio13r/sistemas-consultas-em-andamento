@@ -12,7 +12,7 @@ $buttons = $labels->getChildLabelsPorSigla("RP");
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RPacesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RPacesso']) && $row['RPacesso'] == false)) {
     echo "<script language='javascript'>
     window.alert(' Vocês não tem permissão para acessar essa página.')
     window.location.href='index';
@@ -42,18 +42,18 @@ if (Session::get('grupo') != 0 && $row['RPacesso'] == false) {
                         <div class="col-md-6"> <!-- Alterado para 6 colunas para duas colunas -->
                             <?php foreach ($chunk as $label): ?>
                                 <?php if ($label['disabled'] == 0): ?>
-                                    <?php if (Session::get('grupo') === 0 || $row['RP' . $label['referencial'] . 'acesso'] == true): ?>
-                                        <a href="/consulta-prescricao?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                    <?php if (Session::get('grupo') === 0 || (isset($row['RP' . $label['referencial'] . 'acesso']) && $row['RP' . $label['referencial'] . 'acesso'] == true)): ?>
+                                        <a href="/consulta-prescricao?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
-                                                class="btn btn-<?= ($inputGet['tipoConsulta'] === (string)$label['referencial']) ? 'primary active' : 'secondary' ?> btn-md"
+                                                class="btn btn-<?= (($inputGet['tipoConsulta'] ?? '') === (string)$label['referencial']) ? 'primary active' : 'secondary' ?> btn-md"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao']) ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php endif; ?>
@@ -65,7 +65,11 @@ if (Session::get('grupo') != 0 && $row['RPacesso'] == false) {
     
                 <?php
                     if (isset($inputGet['tipoConsulta'])) {
-                        require_once SERVICES_PATH . '/consulta-prescricao/consulta-prescricao-' . $_GET['tipoConsulta'] . '.php';
+                        $tipoConsulta = intval($inputGet['tipoConsulta']);
+                        $servicePath = SERVICES_PATH . '/consulta-prescricao/consulta-prescricao-' . $tipoConsulta . '.php';
+                        if ($tipoConsulta >= 1 && $tipoConsulta <= 10 && file_exists($servicePath)) {
+                            require_once $servicePath;
+                        }
                     }
                 ?>
             </div>

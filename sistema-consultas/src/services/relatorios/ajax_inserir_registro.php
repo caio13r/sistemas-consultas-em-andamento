@@ -1,7 +1,7 @@
 <?php
 // Habilitar error reporting para debug
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
 // Configurar headers para JSON ANTES de qualquer saída
 header('Content-Type: application/json; charset=utf-8');
@@ -55,9 +55,7 @@ register_shutdown_function(function() {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => false,
-            'message' => 'Erro interno do servidor: ' . $error['message'],
-            'file' => basename($error['file']),
-            'line' => $error['line']
+            'message' => 'Erro interno do servidor.'
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
@@ -283,9 +281,7 @@ try {
     
     retornarJSON([
         'success' => false,
-        'message' => $e->getMessage(),
-        'file' => basename($e->getFile()),
-        'line' => $e->getLine()
+        'message' => 'Erro ao processar a requisição.'
     ]);
 } catch (Error $e) {
     $errorMsg = "ERRO FATAL: " . $e->getMessage() . " em " . $e->getFile() . ":" . $e->getLine();
@@ -293,9 +289,7 @@ try {
     
     retornarJSON([
         'success' => false,
-        'message' => $e->getMessage(),
-        'file' => basename($e->getFile()),
-        'line' => $e->getLine()
+        'message' => 'Erro interno do servidor.'
     ]);
 }
 ?>

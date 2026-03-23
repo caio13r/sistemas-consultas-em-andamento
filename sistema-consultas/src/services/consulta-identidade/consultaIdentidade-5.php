@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI5acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI5acesso']) && $row['CI5acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-identidade';
@@ -38,7 +38,9 @@ $tituloConsulta = 'Estatísticas - CFO ID Lista Detalhada';
         $resultAno = $stmt->fetchAll();
 
         } catch (PDOexception $error) {
-            die("Erro ao retornar os dados: " . $error->getMessage());
+            error_log("Consulta Identidade 5 - Erro PDO (filtros): " . $error->getMessage());
+            echo "<div class='alert alert-danger'>Erro ao retornar os dados dos filtros.</div>";
+            return;
     }
 ?>
 
@@ -52,7 +54,7 @@ $tituloConsulta = 'Estatísticas - CFO ID Lista Detalhada';
                     <option disabled selected value>Selecione</option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CI5select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CI5select']) && $row['CI5select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -101,22 +103,39 @@ $tituloConsulta = 'Estatísticas - CFO ID Lista Detalhada';
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $bindParams = [];
+
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
         $croWhere = "WHERE CRO IS NOT NULL";
     } else {
-        $croWhere = "WHERE CRO = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger'>UF inválida.</div>";
+            return;
+        }
+        $croWhere = "WHERE CRO = :cro";
+        $bindParams[':cro'] = $inputPost["cro"];
     }
 
     if ($inputPost["mes"] === 'ALL' || $inputPost["mes"] === null) {
-        $mesWhere = null;
+        $mesWhere = "";
     } else {
-        $mesWhere = "AND SUBSTRING(DATA_EMISSAO_ID,4,2) = '{$inputPost["mes"]}'";
+        if (!preg_match('/^\d{1,2}$/', $inputPost["mes"])) {
+            echo "<div class='alert alert-danger'>Mês inválido.</div>";
+            return;
+        }
+        $mesWhere = "AND SUBSTRING(DATA_EMISSAO_ID,4,2) = :mes";
+        $bindParams[':mes'] = $inputPost["mes"];
     }
 
     if ($inputPost["ano"] === 'ALL' || $inputPost["ano"] === null) {
-        $anoWhere = null;
+        $anoWhere = "";
     } else {
-        $anoWhere = "AND SUBSTRING(DATA_EMISSAO_ID,7,4) = '{$inputPost["ano"]}'";
+        if (!preg_match('/^\d{4}$/', $inputPost["ano"])) {
+            echo "<div class='alert alert-danger'>Ano inválido.</div>";
+            return;
+        }
+        $anoWhere = "AND SUBSTRING(DATA_EMISSAO_ID,7,4) = :ano";
+        $bindParams[':ano'] = $inputPost["ano"];
     }
 
     try {
@@ -135,10 +154,15 @@ $tituloConsulta = 'Estatísticas - CFO ID Lista Detalhada';
                    $croWhere $anoWhere $mesWhere
                    ORDER BY CRO, PROFISSIONAL, CATEGORIA, INSCRICAO, SUBSTRING(DATA_EMISSAO_ID,7,4)";
         $stmt = $con->prepare($query);
+        foreach ($bindParams as $param => $value) {
+            $stmt->bindValue($param, $value, PDO::PARAM_STR);
+        }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Consulta Identidade 5 - Erro PDO: " . $error->getMessage());
+        echo "<div class='alert alert-danger'>Erro ao retornar os dados.</div>";
+        return;
     }
 ?>
 

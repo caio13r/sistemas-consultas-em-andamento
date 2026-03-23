@@ -7,7 +7,9 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 // Define o caminho onde está o arquivo .env (no diretório "src")
 $dotenvPath = __DIR__ . '/../../';
 if (!file_exists($dotenvPath . '.env')) {
-    die("Arquivo .env não encontrado em: " . $dotenvPath);
+    error_log("Consulta Identidade 8 - Arquivo .env não encontrado em: " . $dotenvPath);
+    echo "<div class='alert alert-danger'>Arquivo .env não encontrado.</div>";
+    return;
 }
 
 // Carrega as variáveis de ambiente do arquivo .env
@@ -20,13 +22,14 @@ Session::CheckSession();
 // Recupera o token da API a partir das variáveis de ambiente
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado. Verifique seu arquivo .env.");
+    echo "<div class='alert alert-danger'>Token da API não configurado no .env</div>";
+    return;
 }
 
 $tituloConsulta = 'Consulta de Identidade por Data';
 
 // Recebe a data selecionada (formulário via POST)
-$data_selecionada = $_POST['data_selecionada'] ?? '';
+$data_selecionada = $inputPost['data_selecionada'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

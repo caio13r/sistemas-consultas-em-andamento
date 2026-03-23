@@ -63,7 +63,8 @@ if (Session::get('login') == TRUE) {
 
     <!-- Includes CSS -->
     <link href="../assets/css/styles.css" rel="stylesheet">
-    <link href="../assets/fontawesome/css/all.min.css" rel="stylesheet" type="text/css">
+    <link href="../assets/css/modern-overrides.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" type="text/css">
     <!-- <link href="../assets/datatables/dataTables.bootstrap4.css" rel="stylesheet"> -->
     <link href="../assets/datatables/datatables.css" rel="stylesheet">
 
@@ -162,14 +163,36 @@ if (Session::get('login') == TRUE) {
                     Serviços
                 </div>
 
+                <?php
+                $sidebarIconMap = [
+                    '/consulta-integrada'     => 'fas fa-search-plus',
+                    '/consulta-auditoria'     => 'fas fa-clipboard-check',
+                    '/consulta-eleicoes'      => 'fas fa-vote-yea',
+                    '/consulta-prescricao'    => 'fas fa-clock',
+                    '/consulta-estatistica'   => 'fas fa-chart-pie',
+                    '/consulta-fiscalizacao'  => 'fas fa-shield-alt',
+                    '/consulta-identidade'    => 'fas fa-id-card',
+                    '/consulta-sigesp'        => 'fas fa-university',
+                    '/tabelas-centralizadas'  => 'fas fa-database',
+                    '/dados-abertos'          => 'fas fa-folder-open',
+                    '/relatorios'             => 'fas fa-file-alt',
+                    '/cracha'                 => 'fas fa-address-card',
+                    '/consulta-rfb'           => 'fas fa-receipt',
+                ];
+                ?>
                 <?php foreach($labels as $label){?>
                     <?php if (Session::get('grupo') == '0' || $row[$label['key_label']] == true) { ?>
                         <?php if ($label['label_id'] != 1) {?>
                             <?php if ($label['disabled'] != 1) { ?>
+                                <?php
+                                $labelUrl = $label['url'] ?? '';
+                                $labelIcon = trim((string) ($label['icon'] ?? ''));
+                                $resolvedSidebarIcon = $sidebarIconMap[$labelUrl] ?? ($labelIcon !== '' ? $labelIcon : 'fas fa-folder-open');
+                                ?>
                                 <li class="nav-item <?= $_SERVER['REDIRECT_URL'] === $label['url'] || $_SERVER['REDIRECT_URL'] === '/consulta-integrada-info' ? 'active' : '' ?>">
-                                    <a class="nav-link" href="<?= $label['url'] ?>">
-                                        <i class="<?= $label['icon'] ?>"></i>
-                                        <span><?= $label['nome_label'] ?></span>
+                                    <a class="nav-link" href="<?= htmlspecialchars($labelUrl) ?>">
+                                        <i class="<?= htmlspecialchars($resolvedSidebarIcon) ?>"></i>
+                                        <span><?= htmlspecialchars($label['nome_label']) ?></span>
                                     </a>
                                 </li>
                             <?php } ?>

@@ -6,9 +6,16 @@ $dotenv->load();
 
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
+use PDO;
 
 // Inicializar sessão sem verificar login
 Session::init();
+
+if (!Session::get('login')) {
+    http_response_code(403);
+    echo "Acesso não autorizado.";
+    exit;
+}
 
 // Configurações otimizadas para grandes volumes
 ini_set('memory_limit', '16384M'); // 16GB
@@ -22,28 +29,33 @@ try {
     $con = Database3::getInstance()->getConnection();
     
     // Recuperar parâmetros da sessão ou GET
-    $cro = $_GET['cro'] ?? '';
-    $categoria = $_GET['categoria'] ?? '';
-    $votante = $_GET['votante'] ?? '';
-    $adimplencia = $_GET['adimplencia'] ?? '';
+    $cro = isset($_GET['cro']) ? trim($_GET['cro']) : '';
+    $categoria = isset($_GET['categoria']) ? trim($_GET['categoria']) : '';
+    $votante = isset($_GET['votante']) ? trim($_GET['votante']) : '';
+    $adimplencia = isset($_GET['adimplencia']) ? trim($_GET['adimplencia']) : '';
     
-    // Construir condições da consulta
-    $conditions = ["1=1"]; // Condição base
+    // Construir condições da consulta com prepared statements
+    $conditions = ["1=1"];
+    $params = [];
     
     if (!empty($cro)) {
-        $conditions[] = "CRO LIKE '%{$cro}%'";
+        $conditions[] = "CRO LIKE :cro";
+        $params[':cro'] = '%' . $cro . '%';
     }
 
     if (!empty($categoria)) {
-        $conditions[] = "CATEGORIA LIKE '%{$categoria}%'";
+        $conditions[] = "CATEGORIA LIKE :categoria";
+        $params[':categoria'] = '%' . $categoria . '%';
     }
 
     if (!empty($votante)) {
-        $conditions[] = "[ELEITOR] = '{$votante}'";
+        $conditions[] = "[ELEITOR] = :votante";
+        $params[':votante'] = $votante;
     }
 
     if (!empty($adimplencia)) {
-        $conditions[] = "[ADIMPLÊNCIA] = '{$adimplencia}'";
+        $conditions[] = "[ADIMPLÊNCIA] = :adimplencia";
+        $params[':adimplencia'] = $adimplencia;
     }
 
     // Query para encontrar CPFs duplicados
@@ -55,13 +67,16 @@ try {
                         ORDER BY total_registros DESC, CPF";
 
     $stmt = $con->prepare($queryDuplicados);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
     $stmt->execute();
     $cpfsDuplicados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     if (count($cpfsDuplicados) > 0) {
         // Extrair apenas os CPFs para usar na segunda query
         $cpfsParaBuscar = array_column($cpfsDuplicados, 'CPF');
-        $cpfsString = "'" . implode("','", $cpfsParaBuscar) . "'";
+        $placeholders = implode(',', array_fill(0, count($cpfsParaBuscar), '?'));
         
         // Query para buscar todos os registros dos CPFs duplicados
         $queryRegistros = "SELECT 
@@ -72,10 +87,13 @@ try {
                             [DATA_NASCIMENTO] AS DATA_NASCIMENTO, [DATA_INSCRIÇÃO_CRO] AS DATA_INSCRICAO_CRO, [DATA_REGISTRO_CFO] AS DATA_REGISTRO_CFO
                           FROM 
                             CFO_CWS.dbo.Cons_Eleicoes_Lista_Completa
-                          WHERE CPF IN ($cpfsString)
+                          WHERE CPF IN ($placeholders)
                           ORDER BY CPF, NOME_COMPLETO";
         
         $stmt2 = $con->prepare($queryRegistros);
+        foreach ($cpfsParaBuscar as $i => $cpf) {
+            $stmt2->bindValue($i + 1, $cpf);
+        }
         $stmt2->execute();
         
         // Configurar headers para download CSV

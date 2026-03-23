@@ -11,26 +11,30 @@ Session::init();
 Session::CheckSession();
 $users = new Users();
 
+$inputPost = $_POST;
+
 // Validação post
-if (!isset($_POST['data'])) {
+if (!isset($inputPost['data'])) {
     $erro = "Algo deu errado, é necessário preencher os campos corretamente.";
     echo "<script language='javascript'>
             window.alert('$erro')
             window.location.href='relatorio-processos';
         </script>";
-    die();
+    exit;
 }
 
-// Recebe a requisição 
 $Exception = 'Erro na busca do Relatório';
 $date_title = [];
 
-// Filtro de UF/CRO
-$uf = isset($_POST['uf']) ? $_POST['uf'] : 'ALL';
+$validUFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO','ALL'];
+$uf = isset($inputPost['uf']) ? strtoupper(trim($inputPost['uf'])) : 'ALL';
+if (!in_array($uf, $validUFs)) {
+    $uf = 'ALL';
+}
 $uf_filter = ($uf != 'ALL') ? "AND [CRO] = '$uf'" : "";
 
-// Regex para o filtro de datas
-$date_start = $_POST['data'].'-01';  // data inicial
+$rawData = preg_replace('/[^0-9\-]/', '', $inputPost['data']);
+$date_start = $rawData.'-01';
 $date = QueryHelper::getDate($date_start);
 $date_end = QueryHelper::getDateEnd($date);
 $date_title[0] = QueryHelper::$mes_extenso[((int) $date[1])]." / ".$date[0];
@@ -99,14 +103,18 @@ try {
     $stmt->bindValue(':origem', $origem, PDO::PARAM_STR);
     $stmt->execute();
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("relatorio-processos-gerar: Erro ao retornar os dados: " . $error->getMessage());
+    echo '<div class="alert alert-danger">Erro ao processar. Tente novamente.</div>';
 }
 
 // Prepara o download do arquivo xlsx
 $arquivo = $title.".xlsx";
 $downloadpath = realpath(dirname(__FILE__, 1)) . "/relatorios/rel.xlsx";
-if (!file_exists($downloadpath))
-   die('Arquivo não existe!');
+if (!file_exists($downloadpath)) {
+   error_log("relatorio-processos-gerar: Arquivo não existe: " . $downloadpath);
+   echo '<div class="alert alert-danger">Erro ao processar. Tente novamente.</div>';
+   exit;
+}
 header('Content-disposition: attachment; filename="'.$arquivo.'";'); 
 header('Content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Length: '.filesize($downloadpath));
@@ -115,4 +123,4 @@ header('Cache-Control: must-revalidate');
 header('Pragma: public');
 
 readfile($downloadpath);
-die(); 
+exit;

@@ -1,6 +1,6 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 use Cfo\SisConsultas\lib\Session;
@@ -24,24 +24,31 @@ Session::init();
 Session::CheckSession();
 $users = new Users();
 
+$inputPost = $_POST;
+
 // Validação POST
-if (!isset($_POST['origem'], $_POST['uf'], $_POST['data'])) {
+if (!isset($inputPost['origem'], $inputPost['uf'], $inputPost['data'])) {
     echo "<script>
         alert('Algo deu errado, é necessário preencher os campos corretamente.');
         window.location.href='relatorio-tarifas';
     </script>";
-    die();
+    exit;
 }
 
-// Filtro de UFs
-if (isset($_POST['uf']) && $_POST['uf'] != 'ALL') {
-    $array_uf = [$_POST['uf']];
+$validUFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO','ALL'];
+$ufInput = strtoupper(trim($inputPost['uf']));
+if (!in_array($ufInput, $validUFs)) {
+    $ufInput = 'ALL';
+}
+
+if ($ufInput != 'ALL') {
+    $array_uf = [$ufInput];
 } else {
     $array_uf = [];
 }
 
-// Datas
-$date_start = $_POST['data'] . '-01';
+$rawData = preg_replace('/[^0-9\-]/', '', $inputPost['data']);
+$date_start = $rawData . '-01';
 $date = QueryHelper::getDate($date_start);
 $date_end = QueryHelper::getDateEnd($date);
 $date_title = [
@@ -53,14 +60,12 @@ $query_start = "DECLARE
 @dataInicio DATE = '$date_start',
 @dataFim DATE = '$date_end';\n";
 
-// Variáveis para armazenar os dados e o título do relatório
 $dadosConsulta = [];
 $tituloConsulta = 'Relatório';
-$nationalTotals = []; // Para armazenar os totais nacionais
-$footerNotes = [];     // Para armazenar as observações do rodapé
+$nationalTotals = [];
+$footerNotes = [];
 
-// Relatório
-$origem = $_POST['origem'];
+$origem = (int)$inputPost['origem'];
 
 switch ($origem) {
     case 1:
@@ -396,7 +401,9 @@ try {
 // --- Lógica de Geração do Excel Integrada ---
 
 if (empty($dadosConsulta) && empty($nationalTotals)) {
-    die('Nenhum dado para exportar!');
+    error_log("relatorio-tarifas-gerar: Nenhum dado para exportar");
+    echo '<div class="alert alert-danger">Erro ao processar. Tente novamente.</div>';
+    exit;
 }
 
 // Determine os cabeçalhos dinamicamente com base nos dados da primeira linha.

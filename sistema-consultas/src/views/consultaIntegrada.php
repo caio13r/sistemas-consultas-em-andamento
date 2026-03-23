@@ -8,92 +8,66 @@ use Cfo\SisConsultas\lib\Labels;
 $instance = new Labels();
 $labels = $instance->getChildLabelsPorSigla("CN");
 
-// A ordem é controlada pelo sistema de display_order no gerenciamento de labels
-// Não aplicamos usort() aqui para respeitar a ordenação configurada
-
 Session::CheckSession();
 
-// Definir 'tipoConsulta' como '1' se não estiver definido
 $tipoConsulta = isset($_GET['tipoConsulta']) ? $_GET['tipoConsulta'] : '1';
+
+$subtitulos = [
+    '1' => 'Consulta por Profissionais',
+    '2' => 'Consulta por Empresas',
+    '3' => 'Consulta Receita Federal (CPF)',
+];
+$subtitulo = $subtitulos[$tipoConsulta] ?? 'Tipo de consulta desconhecido';
 ?>
 
 <div class="container-fluid">
-
-    <div class="card">
-        <div class="card-header">
-        <div class="card-header">
-    <h5>
-        <i class="fas fa-search-plus mr-2 mt-2"></i>Consulta Integradas
-        <?php 
-        if ($tipoConsulta == '1') {
-            echo "<small> - Consulta por Profissionais</small>"; 
-        } elseif ($tipoConsulta == '2') {
-            echo "<small> - Consulta por Empresas</small>";
-        } elseif ($tipoConsulta == '3') {
-            echo "<small> - Consulta Receita Federal (CPF)</small>";
-        } else {
-            echo "<small> - Tipo de consulta desconhecido</small>";
-        }
-        ?>
-    </h5>
-</div>
+    <div class="card consulta-integrada-shell">
+        <div class="card-header consulta-integrada-header">
+            <h4 class="mb-0">Consulta Integrada</h4>
+            <p class="mb-0 consulta-integrada-subtitle"><?= htmlspecialchars($subtitulo) ?></p>
         </div>
 
-        <div class="card-body">
-
-            <!-- Exibir qual consulta está ativa -->
-           
-
-            <!-- Menu -->
-            <div class="row d-flex justify-content-center mt-3 mb-3">
-
-                <?php foreach ($labels as $label) { ?>
-                    <?php if($label['disebled'] != 1){?>
-                        <?php
-                        // Verificação especial para Consulta RFB (tipo 3)
-                        $podeAcessar = false;
-                        if ($label['referencial'] == '3') {
-                            // Consulta RFB: apenas CROs ou email específico
-                            $podeAcessar = Helper::temPermissaoRFB();
-                        } else {
-                            // Outras consultas: verificação padrão
-                            $podeAcessar = (Session::get('grupo') === 0 || $row['CI'.$label['referencial'].'acesso'] == true);
-                        }
-                        ?>
-
-                        <?php if ($podeAcessar) { ?>
-                            <a href="/consulta-integrada?tipoConsulta=<?= $label['referencial'] ?>">
-                                <button
-                                    type="button"
-                                    class="btn btn-<?= ($tipoConsulta == $label['referencial']) ? 'primary active' : 'secondary' ?> btn-md m-1"
+        <div class="card-body consulta-integrada-body">
+            <div class="consulta-integrada-switcher">
+                <div class="consulta-integrada-switcher-grid">
+                    <?php foreach ($labels as $label) { ?>
+                        <?php if($label['disebled'] != 1){?>
+                            <?php
+                            $podeAcessar = false;
+                            if ($label['referencial'] == '3') {
+                                $podeAcessar = Helper::temPermissaoRFB();
+                            } else {
+                                $podeAcessar = (Session::get('grupo') === 0 || $row['CI'.$label['referencial'].'acesso'] == true);
+                            }
+                            ?>
+                            <?php if ($podeAcessar) { ?>
+                                <a
+                                    href="/consulta-integrada?tipoConsulta=<?= $label['referencial'] ?>"
+                                    class="consulta-integrada-switcher-item <?= ($tipoConsulta == $label['referencial']) ? 'is-active' : '' ?>"
                                     data-bs-toggle="popover"
                                     data-bs-html="true"
                                     data-bs-placement="bottom"
-                                    data-bs-content='<?= $label['descricao'] ?>'
+                                    data-bs-content='<?= htmlspecialchars($label['descricao'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
                                     data-bs-trigger="hover"
                                 >
-                                    <?= $label['nome'] ?>
+                                    <?= htmlspecialchars($label['nome']) ?>
                                     <?php if ($label['referencial'] == '3'): ?>
                                         <i class="fas fa-lock ml-1" title="Acesso restrito"></i>
                                     <?php endif; ?>
-                                </button>
-                            </a>
+                                </a>
+                            <?php } ?>
                         <?php } ?>
-                    <?php } ?>
-                <?php }?>
-
+                    <?php }?>
+                </div>
             </div>
 
             <?php
-            // Consulta por Profissionais
             if ($tipoConsulta == '1') {
                 require SERVICES_PATH . '/consulta-integrada/consultaIntegrada-1.php';
             }
-            // Consulta por Empresas
             elseif ($tipoConsulta == '2') {
                 require SERVICES_PATH . '/consulta-integrada/consultaIntegrada-2.php';
             }
-            // Consulta Receita Federal - Redirecionar para nova página com submenu
             elseif ($tipoConsulta == '3') {
                 echo '<script>window.location.href = "/consulta-rfb";</script>';
                 echo '<div class="text-center mt-5">';
@@ -102,10 +76,8 @@ $tipoConsulta = isset($_GET['tipoConsulta']) ? $_GET['tipoConsulta'] : '1';
                 echo '</div>';
             }
             ?>
-
         </div>
     </div>
-
 </div>
 
 <?php

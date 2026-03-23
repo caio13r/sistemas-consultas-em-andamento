@@ -31,17 +31,17 @@ if (Session::get('grupo') != 0 && $row['RE3acesso'] == false) {
     <div class="row mb-4">
         <div class="col-12">
             <div class="btn-group" role="group">
-                <a href="?id=1" class="btn <?= ($_GET['id'] == 1 || empty($_GET['id'])) ? 'btn-primary' : 'btn-secondary' ?>">
+                <a href="?id=1" class="btn <?= (($inputGet['id'] ?? '') == 1 || empty($inputGet['id'])) ? 'btn-primary' : 'btn-secondary' ?>">
                     <i class="fas fa-chart-pie mr-2"></i>Dashboard Power BI
                 </a>
-                <a href="?id=2" class="btn <?= ($_GET['id'] == 2) ? 'btn-primary' : 'btn-secondary' ?>">
+                <a href="?id=2" class="btn <?= (($inputGet['id'] ?? '') == 2) ? 'btn-primary' : 'btn-secondary' ?>">
                     <i class="fas fa-chart-bar mr-2"></i>Relatório Interativo
                 </a>
             </div>
         </div>
     </div>
 
-    <?php if ($_GET['id'] == 1 || empty($_GET['id'])) { ?>
+    <?php if (($inputGet['id'] ?? '') == 1 || empty($inputGet['id'])) { ?>
         <div class="row">
             <div class="col-12">
                 <div class="card">
@@ -59,7 +59,7 @@ if (Session::get('grupo') != 0 && $row['RE3acesso'] == false) {
         </div>
     <?php } ?>
 
-    <?php if ($_GET['id'] == 2) { ?>
+    <?php if (($inputGet['id'] ?? '') == 2) { ?>
         <div class="row">
             <div class="col-12">
                 <div class="card">

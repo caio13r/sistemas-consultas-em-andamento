@@ -22,3 +22,9 @@ sistema-consultas/src/vendor/
 
 # Assets terceiros (Font Awesome - reinstalável)
 sistema-consultas/src/public/assets/fontawesome/
+
+# Docker runtime (dash_visao)
+dash_visao/Removed
+dash_visao/Running
+dash_visao/[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
+dash_visao/11.11.1

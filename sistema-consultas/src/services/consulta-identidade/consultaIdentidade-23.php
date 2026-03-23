@@ -74,14 +74,14 @@ ini_set('upload_max_filesize', '100M');
 echo "<!-- DEBUG: Configurações aplicadas -->\n";
 
 // Verificar se há mensagem de sucesso na URL
-if (isset($_GET['success']) && $_GET['success'] == 1) {
+if (isset($inputGet['success']) && $inputGet['success'] == 1) {
     $success_message = 'Consulta realizada com sucesso!';
 }
 
 // Parâmetros de filtro
-$data_inicial = $_GET['data_inicial'] ?? '';
-$data_final = $_GET['data_final'] ?? '';
-$cro_uf = $_GET['cro_uf'] ?? '';
+$data_inicial = $inputGet['data_inicial'] ?? '';
+$data_final = $inputGet['data_final'] ?? '';
+$cro_uf = $inputGet['cro_uf'] ?? '';
 
 // Se não há filtros, definir período padrão dos últimos 30 dias
 if (empty($data_inicial) && empty($data_final)) {

@@ -12,7 +12,11 @@ class Connection {
     public static function conn_Sqlsrv(string $path, string $query_start = '', string $query_data = ''):array{
         if( $query_data == ''){
             $path = realpath(dirname(__FILE__, 2)) . "/script/{$path}.sql";
-            $myfile = fopen($path, "r") or die("Unable to open file!---");
+            $myfile = fopen($path, "r");
+            if (!$myfile) {
+                error_log("Connection::conn_Sqlsrv - Unable to open file: {$path}");
+                return [];
+            }
             $script = fread($myfile,filesize($path));
             fclose($myfile);
         }else{
@@ -36,9 +40,9 @@ class Connection {
         $arr_result = $stmt->fetchAll();
         $stmt = null; 
 
-        // Error handling
         } catch (PDOException $e) {
-            die("Falha ao conectar ao banco de dados: " . $e->getMessage());
+            error_log("Connection::conn_Sqlsrv - Falha ao conectar ao banco de dados: " . $e->getMessage());
+            return [];
         }
 
         return $arr_result;
@@ -62,9 +66,9 @@ class Connection {
         $arr_result = $stmt->fetchAll();
         $stmt = null; 
 
-        // Error handling
         } catch (PDOException $e) {
-            die("Falha ao conectar ao banco de dados: " . $e->getMessage());
+            error_log("Connection::connWithScript - Falha ao conectar ao banco de dados: " . $e->getMessage());
+            return [];
         }
 
         return $arr_result;
@@ -84,9 +88,9 @@ class Connection {
     $arr_result = $stmt->fetchAll();
     $stmt = null; 
 
-    // Error handling
     } catch (PDOException $e) {
-        die("Falha ao conectar ao banco de dados: " . $e->getMessage());
+        error_log("Connection::conn_mysql - Falha ao conectar ao banco de dados: " . $e->getMessage());
+        return [];
     }
 
     return $arr_result;

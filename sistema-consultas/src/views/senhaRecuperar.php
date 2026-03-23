@@ -48,11 +48,11 @@ Session::CheckLogin();
                                 <form id="recuperarSenha" method="POST">
                                     <div class="form-group">
                                         <label for="email">E-mail cadastrado:</label>
-                                        <input type="email" name="email" class="form-control" value="<?= $inputGet["email"]; ?>" required>
+                                        <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($inputGet["email"] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="idnewpass">ID de recuperação:</label>
-                                        <input type="text" name="idnewpass" class="form-control" value="<?= $inputGet["token"]; ?>" required>
+                                        <input type="text" name="idnewpass" class="form-control" value="<?= htmlspecialchars($inputGet["token"] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="newpass">Informe o novo password:</label>
@@ -103,7 +103,11 @@ Session::CheckLogin();
                                             $stmt->bindValue(':idpassword', $idpassword);
                                             $result = $stmt->execute();
                                             } catch (PDOexception $error) {
-                                                die("Error: " . $error->getMessage());
+                                                error_log("Error updating password recovery: " . $error->getMessage());
+                                                $msg = '<div class="alert alert-danger alert-dismissible mt-3" id="flash-msg">
+                                                <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                                                <strong>Erro!</strong> Ocorreu um erro ao processar a solicitação. Tente novamente mais tarde.</div>';
+                                                echo $msg;
                                             }
                                         
                                             // Envio do e-mail usando EmailHelper
@@ -114,7 +118,7 @@ Session::CheckLogin();
                                                 if ($result['success']) {
                                                     $msg = '<div class="alert alert-success alert-dismissible mt-3" id="flash-msg">
                                                     <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-                                                    <strong>Successo!</strong> O e-mail com o link para alteração de senha foi enviado para <u>'.$email.'</u></div>';
+                                                    <strong>Successo!</strong> O e-mail com o link para alteração de senha foi enviado para <u>'.htmlspecialchars($email, ENT_QUOTES, 'UTF-8').'</u></div>';
                                                     echo $msg;
                                                 } else {
                                                     $msg = '<div class="alert alert-danger alert-dismissible mt-3" id="flash-msg">

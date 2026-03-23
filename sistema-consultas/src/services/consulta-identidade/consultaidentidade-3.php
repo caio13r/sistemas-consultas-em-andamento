@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI3acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI3acesso']) && $row['CI3acesso'] == false)) {
   echo "<script language='javascript'>
   window.alert('Você não tem permissão para acessar essa página.')
   window.location.href='consulta-identidade';
@@ -26,7 +26,7 @@ $tituloConsulta = 'Evolução CFO ID';
                     <option disabled>Selecione a UF</option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CI3select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CI3select']) && $row['CI3select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -52,13 +52,28 @@ $tituloConsulta = 'Evolução CFO ID';
 
     if ($inputPost["uf"] === 'ALL') {
         $path .= "evolucao_emissao_cfo_id_geral.sql";
-        $myfile = fopen($path, "r") or die("Unable to open file!");
+        $myfile = fopen($path, "r");
+        if (!$myfile) {
+            error_log("Consulta Identidade 3 - Não foi possível abrir o arquivo: " . $path);
+            echo "<div class='alert alert-danger'>Erro ao abrir arquivo de consulta.</div>";
+            return;
+        }
         $script = fread($myfile,filesize($path));
         fclose($myfile);
     } else {
+        $ufValida = array_key_exists($inputPost["uf"], Helper::$ufList) ? $inputPost["uf"] : '';
+        if (empty($ufValida)) {
+            echo "<div class='alert alert-danger'>UF inválida.</div>";
+            return;
+        }
         $path .= "evolucao_emissao_cfo_id.sql";
-        $myfile = fopen($path, "r") or die("Unable to open file!");
-        $script = "DECLARE @filtroUf AS VARCHAR(2) = '{$inputPost["uf"]}';".fread($myfile,filesize($path));
+        $myfile = fopen($path, "r");
+        if (!$myfile) {
+            error_log("Consulta Identidade 3 - Não foi possível abrir o arquivo: " . $path);
+            echo "<div class='alert alert-danger'>Erro ao abrir arquivo de consulta.</div>";
+            return;
+        }
+        $script = "DECLARE @filtroUf AS VARCHAR(2) = '{$ufValida}';".fread($myfile,filesize($path));
         fclose($myfile);
     }
 
@@ -70,7 +85,9 @@ $tituloConsulta = 'Evolução CFO ID';
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Consulta Identidade 3 - Erro PDO: " . $error->getMessage());
+        echo "<div class='alert alert-danger'>Erro ao retornar os dados.</div>";
+        return;
     }
 
     if (count($result) > 0) {
@@ -104,12 +121,12 @@ $tituloConsulta = 'Evolução CFO ID';
           foreach ($result as $row) {
             echo "<tr>";
             // echo "<td>" . $row['MES_COBRANCA'] . "</td>";
-            echo "<td>" . $row['MES_COBRA'] . "</td>";
-            echo "<td>" . $row['_2022'] . "</td>";
-            echo "<td>" . $row['_2023'] . "</td>";
-            echo "<td>" . $row['DIF_2023'] . "</td>";
-            echo "<td>" . $row['_2024'] . "</td>";
-            echo "<td>" . $row['DIF_2024'] . "</td>";
+            echo "<td>" . htmlspecialchars($row['MES_COBRA'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['_2022'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['_2023'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['DIF_2023'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['_2024'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['DIF_2024'] ?? '') . "</td>";
             echo "</tr>";
           }
         ?>

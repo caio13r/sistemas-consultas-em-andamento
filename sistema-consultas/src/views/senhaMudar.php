@@ -36,7 +36,7 @@ if (isset( $changePass)) {
 <div class="container-fluid">
   <div class="card ">
     <div class="card-header">
-      <h5><i class="fas fa-wrench mr-2 mt-2"></i> Alterar senha <span class="float-right"> <a href="perfil?id=<?= $inputGet['id'] ?>" class="btn btn-primary">Voltar</a> </h5>
+      <h5><i class="fas fa-wrench mr-2 mt-2"></i> Alterar senha <span class="float-right"> <a href="perfil?id=<?= htmlspecialchars($inputGet['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="btn btn-primary">Voltar</a> </h5>
     </div>
     <div class="card-body">
 
@@ -67,9 +67,9 @@ if (isset( $changePass)) {
 
       </div>
 
-    <?php } elseif (Session::get("grupo") == '0' && isset($_GET['edit'])) { ?>
+    <?php } elseif (Session::get("grupo") == '0' && isset($inputGet['edit'])) { ?>
 
-      <h5 class="mb-3">Alterar senha do usuário: <a href="perfil?id=<?= $inputGet['id'] ?>"><?= $getUinfo->name; ?></a> </h5>
+      <h5 class="mb-3">Alterar senha do usuário: <a href="perfil?id=<?= htmlspecialchars($inputGet['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($getUinfo->name); ?></a> </h5>
 
       <div class="col-md-6 offset-md-3">
 
@@ -88,7 +88,7 @@ if (isset( $changePass)) {
     <?php } else {
       echo "<script language='javascript'>
       window.alert('Não é possível acessar essa página.')
-      window.location.href='perfil?id=" . $inputGet['id'] . "';
+      window.location.href='perfil?id=" . htmlspecialchars($inputGet['id'] ?? '', ENT_QUOTES, 'UTF-8') . "';
       </script>";
     } ?>
 

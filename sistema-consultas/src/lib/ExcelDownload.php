@@ -3,11 +3,24 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Font;
+use Cfo\SisConsultas\lib\Session;
+
+Session::init();
 
 if (isset($_POST['ExcelDownload'])) {
 
 
-    $data = json_decode($_POST['dadosConsulta'], true);
+    $data = [];
+    if (!empty($_POST['dadosConsulta'])) {
+        $data = json_decode($_POST['dadosConsulta'], true);
+    } else {
+        $data = Session::get('excel_download_data') ?: [];
+    }
+
+    if (empty($data) || !is_array($data)) {
+        header('Location:/');
+        exit();
+    }
 
     // Converte as datas para o formato brasileiro (dia/mês/ano)
     $data = array_map(function($row) {
@@ -30,11 +43,13 @@ if (isset($_POST['ExcelDownload'])) {
     
     // Título da Planilha
     // Verificar se é o relatório de Eleitores Pagantes Após a Geração dos Arquivos
-    if (isset($_POST['tituloConsulta']) && strpos($_POST['tituloConsulta'], 'Eleitores Pagantes Após a Geração dos Arquivos') !== false) {
+    $tituloConsulta = $_POST['tituloConsulta'] ?? Session::get('excel_download_title') ?? 'Consulta';
+
+    if (isset($tituloConsulta) && strpos($tituloConsulta, 'Eleitores Pagantes Após a Geração dos Arquivos') !== false) {
         // Usar o título exatamente como vem do consultaeleicoes-4.php
-        $title = $_POST['tituloConsulta'];
+        $title = $tituloConsulta;
     } else {
-        $title = 'Sistema Consultas CFO - ' . $_POST['tituloConsulta'] . ' - Relatório emitido na data: ' . date('d/m/Y H:i:s');
+        $title = 'Sistema Consultas CFO - ' . $tituloConsulta . ' - Relatório emitido na data: ' . date('d/m/Y H:i:s');
     }
 
     // Estilo para o título centralizado e em negrito
@@ -88,7 +103,7 @@ if (isset($_POST['ExcelDownload'])) {
     $highestColumn = $sheet->getHighestColumn();
 
     // Destacar coluna ATIVO_OUTRO_CRO em vermelho e negrito para o relatório específico
-    if (isset($_POST['tituloConsulta']) && strpos($_POST['tituloConsulta'], 'Ativos Duplicados em outro CRO pelo CPF') !== false) {
+    if (isset($tituloConsulta) && strpos($tituloConsulta, 'Ativos Duplicados em outro CRO pelo CPF') !== false) {
         // Procurar a coluna ATIVO_OUTRO_CRO
         $colIndex = null;
         $headers = array_keys($data[0]);
@@ -109,7 +124,7 @@ if (isset($_POST['ExcelDownload'])) {
     }
 
     // Se for o relatório de Estatísticas por CRO, aplicar formatação especial no cabeçalho
-    if (isset($_POST['tituloConsulta']) && strpos($_POST['tituloConsulta'], 'Estatísticas por CRO da Eleição de 03/10/2025') !== false) {
+    if (isset($tituloConsulta) && strpos($tituloConsulta, 'Estatísticas por CRO da Eleição de 03/10/2025') !== false) {
         // Deixar o cabeçalho todo maiúsculo
         $headers = array_keys($data[0]);
         $headers_upper = array_map('strtoupper', $headers);
@@ -223,7 +238,7 @@ for ($row = 3; $row <= $highestRow; $row++) {
 
     // Define cabeçalhos para o download
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment;filename="'.$_POST['tituloConsulta'].'.xlsx"');
+    header('Content-Disposition: attachment;filename="'.$tituloConsulta.'.xlsx"');
     header('Cache-Control: max-age=0');
 
     // Envia o arquivo Excel para o navegador

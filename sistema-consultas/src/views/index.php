@@ -16,44 +16,59 @@ if (isset($msg)) {
 }
 Session::set("msg", NULL);
 Session::set("logMsg", NULL);
+
+$iconMap = [
+    '/consulta-integrada'   => 'fas fa-search-plus',
+    '/consulta-auditoria'   => 'fas fa-clipboard-check',
+    '/consulta-eleicoes'    => 'fas fa-vote-yea',
+    '/consulta-prescricao'  => 'fas fa-clock',
+    '/consulta-estatistica' => 'fas fa-chart-pie',
+    '/consulta-fiscalizacao'=> 'fas fa-shield-alt',
+    '/consulta-identidade'  => 'fas fa-id-card',
+    '/consulta-sigesp'      => 'fas fa-university',
+    '/tabelas-centralizadas'=> 'fas fa-database',
+    '/dados-abertos'        => 'fas fa-folder-open',
+    '/relatorios'           => 'fas fa-file-alt',
+    '/cracha'               => 'fas fa-address-card',
+    '/consulta-rfb'         => 'fas fa-receipt',
+];
 ?>
 
 <div class="container-fluid">
 
-    <div class="row">
+    <div class="welcome-banner">
+        <h2>Bem-vindo, <?= htmlspecialchars(Session::get("name")) ?></h2>
+        <p>Selecione uma das consultas abaixo para começar.</p>
+    </div>
 
+    <div class="row">
         <?php foreach ($labels as $label) { ?>
             <?php if($label['label_id'] != 1){ ?>
                 <?php if($label['disabled'] != 1){?>
                     <?php if (Session::get('grupo') == '0' || $row[$label['key_label']] == true) { ?>
-                        <div class="col-lg-6">
-                            <div class="card border-left-dark shadow mb-4">
+                        <?php
+                        $url = $label['url'] ?? '';
+                        $resolvedIcon = $iconMap[$url] ?? ($label['icon'] ?? 'fas fa-folder-open');
+                        ?>
+                        <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+                            <a href="<?= htmlspecialchars($url) ?>" class="card home-card d-block text-decoration-none h-100">
                                 <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="co-12">
-                                            <div class="text-lg text-dark font-weight-bold">
-                                                <?= $label['nome_label'] ?>
-                                            </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="home-card-icon mr-3">
+                                            <i class="<?= htmlspecialchars($resolvedIcon) ?>"></i>
                                         </div>
-                                        <div class="col-12">
-                                            <?= $label['descricao'] ?>
-                                            <br>
-                                            <a href="<?= $label['url'] ?>" class="btn-sm btn-secondary btn-icon-split mt-1">
-                                                <span class="icon text-white-50">
-                                                    <i class="fas fa-arrow-right"></i>
-                                                </span>
-                                                <span class="text">Clique para acessar</span>
-                                            </a>
+                                        <div>
+                                            <div class="home-card-title"><?= htmlspecialchars($label['nome_label']) ?></div>
+                                            <p class="home-card-desc"><?= htmlspecialchars($label['descricao'] ?? '') ?></p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                     <?php } ?>
                 <?php }?>
             <?php } ?>
         <?php } ?>
-
     </div>
 
 </div>

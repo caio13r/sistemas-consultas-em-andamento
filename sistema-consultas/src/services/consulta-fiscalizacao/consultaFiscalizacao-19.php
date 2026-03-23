@@ -1,13 +1,11 @@
 <?php 
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF9acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row) && isset($row['CF9acesso']) && $row['CF9acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -47,26 +45,45 @@ $tituloConsulta = 'Estatísticas de Quantidade de Fiscais';
 
 <?php if (isset($inputPost["submit"])) { 
     $croValue = $inputPost["cro"] ?? 'ALL';
-    $script = "DECLARE @CRO_UF VARCHAR(6) = '{$croValue}'; ";
 
-    $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao19.sql";
-    $myfile = fopen($path, "r") or die("Unable to open file!");
-    $script .= fread($myfile, filesize($path));
-    fclose($myfile);
-
-    if ($croValue === 'ALL') {
-        $script = str_replace("WHERE [CRO] = @CRO_UF", "", $script);
+    $erro = '';
+    $allowedCro = array_merge(array_keys(Helper::$ufList), ['Brasil']);
+    if ($croValue !== 'ALL' && !in_array($croValue, $allowedCro, true)) {
+        $erro = "Estado inválido.";
     }
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-        $stmt = $con->prepare($script);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao19.sql";
+        $myfile = fopen($path, "r") or die("Unable to open file!");
+        $script = fread($myfile, filesize($path));
+        fclose($myfile);
 
-    } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        $params = [];
+        if ($croValue === 'ALL') {
+            $script = str_replace("WHERE [CRO] = @CRO_UF", "", $script);
+        } else {
+            $script = str_replace("@CRO_UF", ":cro", $script);
+            $params[':cro'] = $croValue;
+        }
+
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+            $stmt = $con->prepare($script);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (PDOException $error) {
+            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+            $result = [];
+        }
     }
 ?>
 
@@ -93,8 +110,8 @@ $tituloConsulta = 'Estatísticas de Quantidade de Fiscais';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Qtd_Fiscais'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Qtd_Fiscais']) . "</td>";
                     echo "</tr>";
                 }
             ?>

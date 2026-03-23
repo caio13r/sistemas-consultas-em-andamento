@@ -19,13 +19,14 @@ if (Session::get('grupo') != 0 && (isset($row['CI18acesso']) && $row['CI18acesso
 
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado.");
+    error_log("Token da API não configurado.");
+    echo "<div class='alert alert-danger'>Token da API não configurado.</div>";
+    return;
 }
 
-// Valores para o formulário
-$cro = $_POST['cro'] ?? ''; // Renomeado de $uf para $cro
-$start_date_form = $_POST['start_date'] ?? '';
-$end_date_form = $_POST['end_date'] ?? '';
+$cro = $inputPost['cro'] ?? '';
+$start_date_form = $inputPost['start_date'] ?? '';
+$end_date_form = $inputPost['end_date'] ?? '';
 
 // Definir um page_amount alto, agora que a API permite
 $page_amount = 1000000; // Conforme a nova capacidade da API
@@ -34,7 +35,7 @@ $page_number = 1; // Sempre 1, pois buscamos tudo de uma vez
 $error_message = ''; // Variável para armazenar mensagens de erro para o usuário
 
 // Processar a submissão do formulário
-if (isset($_POST['submit_query'])) {
+if (isset($inputPost['submit_query'])) {
     // Validar datas para garantir que não estejam vazias
     if (empty($start_date_form) || empty($end_date_form)) {
         $error_message = 'Por favor, preencha a Data Inicial e a Data Final.';
@@ -62,7 +63,7 @@ if (isset($_POST['submit_query'])) {
 
 
 // Só executa a chamada à API se não houver mensagens de erro e se o formulário foi submetido
-if (empty($error_message) && isset($_POST['submit_query'])) {
+if (empty($error_message) && isset($inputPost['submit_query'])) {
     // Convert date format to required API format (dd/mm/yyyy hh:mm:ss)
     $start_date_api = date('d/m/Y 00:00:00', strtotime($start_date_form));
     $end_date_api = date('d/m/Y 23:59:59', strtotime($end_date_form));
@@ -219,11 +220,11 @@ $tituloConsulta = "Consulta de Postagem de Identidade - CRO: " . htmlspecialchar
         </div>
     <?php endif; ?>
 
-    <?php if (isset($_POST['submit_query']) && !empty($cro) && empty($error_message) && !empty($list_results)): ?>
+    <?php if (isset($inputPost['submit_query']) && !empty($cro) && empty($error_message) && !empty($list_results)): ?>
         <div class="total-results">
             Total de registros para **CRO: <?= htmlspecialchars($cro) ?>** e **Período: <?= htmlspecialchars(date('d/m/Y', strtotime($start_date_form))) ?> a <?= htmlspecialchars(date('d/m/Y', strtotime($end_date_form))) ?>**: **<?= number_format($total_results, 0, ',', '.') ?>**
         </div>
-    <?php elseif (isset($_POST['submit_query']) && empty($list_results) && empty($error_message)): ?>
+    <?php elseif (isset($inputPost['submit_query']) && empty($list_results) && empty($error_message)): ?>
         <div class='alert alert-info'>Nenhum resultado encontrado para os critérios informados.</div>
     <?php endif; ?>
 

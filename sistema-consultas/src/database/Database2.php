@@ -48,16 +48,24 @@ class Database2 {
 
       // Error handling
     } catch (PDOException $e) {
-      die("Falha ao conectar ao banco de dados: " . $e->getMessage());
+      error_log("Database2 (MySQL) - Falha ao conectar: " . $e->getMessage());
+      $this->connection = null;
     }
   }
 
   // Magic method clone is empty to prevent duplication of connection
   private function __clone () {}
 
+  public function isConnected(): bool {
+    return $this->connection !== null;
+  }
+
   // Get the connection
   public function getConnection ()
   {
+    if ($this->connection === null) {
+      throw new PDOException("Conexão com MySQL (DB2) indisponível.");
+    }
     return $this->connection;
   }
 }

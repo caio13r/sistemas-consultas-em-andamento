@@ -32,8 +32,8 @@ $error_message = '';
 $success_message = '';
 
 // Verifica se veio redirecionamento com sucesso
-if (isset($_GET['success']) && $_GET['success'] == '1') {
-    $success_message = '✅ Registro inserido com sucesso! O formulário foi limpo e está pronto para a próxima inserção.QUERO QUERO ';
+if (isset($inputGet['success']) && $inputGet['success'] == '1') {
+    $success_message = '✅ Registro inserido com sucesso! O formulário foi limpo e está pronto para a próxima inserção.';
 }
 
 // Gera um token único para prevenir reenvio
@@ -45,18 +45,17 @@ $token = $_ENV['API_TOKEN'] ?? null;
 $usuario = Session::get('name') ?? Session::get('nome') ?? Session::get('user') ?? Session::get('login') ?? Session::get('usuario') ?? 'Desconhecido';
 
 // Inserção de dados via POST
-if (isset($_POST['submit_ar']) || isset($_POST['submit_manual'])) {
-    // Verifica se o token é válido para prevenir reenvio
-    if (!isset($_POST['form_token']) || empty($_POST['form_token'])) {
+if (isset($inputPost['submit_ar']) || isset($inputPost['submit_manual'])) {
+    if (!isset($inputPost['form_token']) || empty($inputPost['form_token'])) {
         $error_message = 'Token de formulário inválido. Tente novamente.';
     } else {
         $con = Database1::getInstance()->getConnection();
-        $ar = trim($_POST['ar'] ?? '');
-        $inscricao = trim($_POST['inscricao'] ?? '');
-        $data_despacho = $_POST['data_despacho'] ?? '';
-        $cro_uf = $_POST['cro_uf'] ?? '';
-        $cpf = trim($_POST['cpf'] ?? '');
-        $consta_api = isset($_POST['consta_api']) ? (int)$_POST['consta_api'] : 0;
+        $ar = trim($inputPost['ar'] ?? '');
+        $inscricao = trim($inputPost['inscricao'] ?? '');
+        $data_despacho = $inputPost['data_despacho'] ?? '';
+        $cro_uf = $inputPost['cro_uf'] ?? '';
+        $cpf = trim($inputPost['cpf'] ?? '');
+        $consta_api = isset($inputPost['consta_api']) ? (int)$inputPost['consta_api'] : 0;
         
         if (empty($inscricao)) $required_fields[] = 'Inscrição';
         if (empty($data_despacho)) $required_fields[] = 'Data do Despacho';
@@ -134,7 +133,11 @@ try {
     $stmt_total->execute();
     $total_geral = $stmt_total->fetch(PDO::FETCH_ASSOC)['total'];
 } catch (PDOException $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("consultaIdentidade-20: Erro ao retornar os dados: " . $error->getMessage());
+    $error_message = "Erro ao carregar os dados. Tente novamente mais tarde.";
+    $ultimos_despachos = [];
+    $contagem_estados = [];
+    $total_geral = 0;
 }
 
 $ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',

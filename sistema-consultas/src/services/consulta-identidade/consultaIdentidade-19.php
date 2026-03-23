@@ -18,13 +18,15 @@ if (Session::get('grupo') != 0 && (isset($row['CI19acesso']) && $row['CI19acesso
 
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado.");
+    error_log("consultaIdentidade-19: Token da API não configurado.");
+    echo "<div class='alert alert-danger'>Erro interno: configuração da API indisponível. Contate o administrador.</div>";
+    return;
 }
 
 // Inicializa variáveis do formulário
-$uf_form = $_POST['uf'] ?? '';
+$uf_form = $inputPost['uf'] ?? '';
 $error_message = '';
-$is_form_submitted = isset($_POST['submit_query']);
+$is_form_submitted = isset($inputPost['submit_query']);
 
 $page_amount = 1000000;
 $page_number = 1;

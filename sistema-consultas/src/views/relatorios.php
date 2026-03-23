@@ -55,17 +55,17 @@ if (Session::get('grupo') != 0 && $row['REacesso'] == false) {
                             <?php foreach($buttons as $label) { ?>
                                 <?php if ($label['grupo'] == 0 && $label['disabled'] != 1){?>
                                     <?php if (Session::get('grupo') === 0 || $row['RE'.$label['referencial'].'acesso'] == true) { ?>
-                                        <a href="/relatorios?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                        <a href="/relatorios?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
                                                 class="btn btn-<?= ($inputGet['tipoConsulta'] === (string)$label['referencial']) ? 'primary active' : 'secondary' ?> btn-md btn-edit"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -85,17 +85,17 @@ if (Session::get('grupo') != 0 && $row['REacesso'] == false) {
                             <?php foreach($buttons as $label) { ?>
                                 <?php if ($label['grupo'] == 1 && $label['disabled'] != 1){?>
                                     <?php if (Session::get('grupo') === 0 || $row['RE'.$label['referencial'].'acesso'] == true) { ?>
-                                        <a href="/relatorios?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                        <a href="/relatorios?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
                                                 class="btn btn-<?= ($inputGet['tipoConsulta'] === (string)$label['referencial']) ? 'primary active' : 'secondary' ?> btn-md btn-edit"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -114,7 +114,7 @@ if (Session::get('grupo') != 0 && $row['REacesso'] == false) {
                 3 => 'relatorio-LAI-2.php',                           // RE3 - Relatório LAI/LGPD
                 // 4 => 'relatorio-delegadoeleitor.php',               
                 // // RE4 - Relatório Delegado Eleitor
-                // 5 => 'relatorio-profissional-formacao.php',         // RE5 - Relatório Profissional x Formação
+                5 => 'relatorio-profissional-formacao.php',         // RE5 - Relatório Profissional x Formação
                 7 => 'relatorio-processos-especialidade.php',       // RE7 - Relatório Processos de Especialidade e Habilitação
                
                 8 => 'relatorio-arrecadacao-bb.php',                // RE8 - Relatório de Arrecadação e Tarifas do BANCO DO BRASIL (boletos mensal)
@@ -129,7 +129,7 @@ if (Session::get('grupo') != 0 && $row['REacesso'] == false) {
                 13 => 'relatorio-pagamentos-selfpay.php',           // RE13 - Relatório de Arrecadação do CARTÃO DE CREDITO - SELFPAY / BKBANK
                 14 => 'relatorio-adimplencia-valores.php',           // RE14 - Relatório de Adimplência (com valores)
             ];
-            $tipoConsulta = $_GET['tipoConsulta'] ?? null;
+            $tipoConsulta = $inputGet['tipoConsulta'] ?? null;
             if ($tipoConsulta && isset($fileMap[$tipoConsulta])) {
                 require SERVICES_PATH . '/relatorios/' . $fileMap[$tipoConsulta];
             }

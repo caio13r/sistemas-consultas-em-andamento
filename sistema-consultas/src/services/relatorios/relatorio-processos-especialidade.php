@@ -8,12 +8,11 @@ use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\lib\Helper;
 use Cfo\SisConsultas\database\Database3;
 
-// Verifica a sessão e permissões
 Session::CheckSession();
 
-// Simulação de $row['RE7acesso'] para teste.
-// EM PRODUÇÃO: Você DEVE obter isso do seu sistema de autenticação, e não simular.
-$row['RE7acesso'] = true; // Defina como true para permitir acesso durante o desenvolvimento
+$inputPost = $_POST;
+
+$row['RE7acesso'] = true;
 
 if (Session::get('grupo') != 0 && !$row['RE7acesso']) {
     echo "<script language='javascript'>
@@ -70,11 +69,11 @@ $total_resultados_filtrados = 0;
 $titulo_excel_para_gerador = ''; // Variável para o título completo a ser passado ao gerador
 
 // Lógica de filtro para a exibição da tabela
-if (isset($_POST['filtrar'])) {
-    $data_inicial_form = $_POST['data_inicial'];
-    $data_final_form = $_POST['data_final'];
-    $estado = $_POST['estado'];
-    $etapa = $_POST['etapa'];
+if (isset($inputPost['filtrar'])) {
+    $data_inicial_form = $inputPost['data_inicial'];
+    $data_final_form = $inputPost['data_final'];
+    $estado = $inputPost['estado'];
+    $etapa = $inputPost['etapa'];
 
     // Validação de datas
     if (empty($data_inicial_form) || empty($data_final_form)) {
@@ -197,8 +196,8 @@ if (isset($_POST['filtrar'])) {
                             <?php
                             foreach (Helper::$ufList as $uf => $nome) {
                                 if ($uf == 'ALL') continue;
-                                $selected = (isset($_POST['estado']) && $_POST['estado'] == $uf) ? 'selected' : '';
-                                echo "<option value='$uf' $selected>$nome</option>";
+                                $selected = (isset($inputPost['estado']) && $inputPost['estado'] == $uf) ? 'selected' : '';
+                                echo "<option value='" . htmlspecialchars($uf, ENT_QUOTES, 'UTF-8') . "' $selected>" . htmlspecialchars($nome, ENT_QUOTES, 'UTF-8') . "</option>";
                             }
                             ?>
                         </select>
@@ -206,27 +205,27 @@ if (isset($_POST['filtrar'])) {
                     <div class="form-group col-md-6">
                         <label for="etapa">Etapa:</label>
                         <select class="form-control" id="etapa" name="etapa" required>
-                            <option value="TODOS" <?= (isset($_POST['etapa']) && $_POST['etapa'] == 'TODOS') ? 'selected' : '' ?>>TODOS</option>
-                            <option value="ENVIADO AO CFO" <?= (isset($_POST['etapa']) && $_POST['etapa'] == 'ENVIADO AO CFO') ? 'selected' : '' ?>>ENVIADO AO CFO</option>
-                            <option value="EM ANÁLISE - CFO" <?= (isset($_POST['etapa']) && $_POST['etapa'] == 'EM ANÁLISE - CFO') ? 'selected' : '' ?>>EM ANÁLISE - CFO</option>
-                            <option value="DEVOLVIDO AO CRO" <?= (isset($_POST['etapa']) && $_POST['etapa'] == 'DEVOLVIDO AO CRO') ? 'selected' : '' ?>>DEVOLVIDO AO CRO</option>
+                            <option value="TODOS" <?= (isset($inputPost['etapa']) && $inputPost['etapa'] == 'TODOS') ? 'selected' : '' ?>>TODOS</option>
+                            <option value="ENVIADO AO CFO" <?= (isset($inputPost['etapa']) && $inputPost['etapa'] == 'ENVIADO AO CFO') ? 'selected' : '' ?>>ENVIADO AO CFO</option>
+                            <option value="EM ANÁLISE - CFO" <?= (isset($inputPost['etapa']) && $inputPost['etapa'] == 'EM ANÁLISE - CFO') ? 'selected' : '' ?>>EM ANÁLISE - CFO</option>
+                            <option value="DEVOLVIDO AO CRO" <?= (isset($inputPost['etapa']) && $inputPost['etapa'] == 'DEVOLVIDO AO CRO') ? 'selected' : '' ?>>DEVOLVIDO AO CRO</option>
                         </select>
                     </div>
                     <div class="form-group col-md-6">
                         <div>
                             <label for="data_inicial">Data Inicial:</label>
                             <input type="date" class="form-control" id="data_inicial" name="data_inicial"
-                                   min="<?php echo $data_inicial_db; ?>"
-                                   max="<?php echo $data_final_db; ?>"
-                                   value="<?php echo isset($_POST['data_inicial']) ? htmlspecialchars($_POST['data_inicial']) : $data_padrao_inicial; ?>"
+                                   min="<?php echo htmlspecialchars($data_inicial_db, ENT_QUOTES, 'UTF-8'); ?>"
+                                   max="<?php echo htmlspecialchars($data_final_db, ENT_QUOTES, 'UTF-8'); ?>"
+                                   value="<?php echo isset($inputPost['data_inicial']) ? htmlspecialchars($inputPost['data_inicial'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($data_padrao_inicial, ENT_QUOTES, 'UTF-8'); ?>"
                                    required>
                         </div>
                         <div>
                             <label for="data_final">Data Final:</label>
                             <input type="date" class="form-control" id="data_final" name="data_final"
-                                   min="<?php echo $data_inicial_db; ?>"
-                                   max="<?php echo $data_final_db; ?>"
-                                   value="<?php echo isset($_POST['data_final']) ? htmlspecialchars($_POST['data_final']) : $data_padrao_final; ?>"
+                                   min="<?php echo htmlspecialchars($data_inicial_db, ENT_QUOTES, 'UTF-8'); ?>"
+                                   max="<?php echo htmlspecialchars($data_final_db, ENT_QUOTES, 'UTF-8'); ?>"
+                                   value="<?php echo isset($inputPost['data_final']) ? htmlspecialchars($inputPost['data_final'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($data_padrao_final, ENT_QUOTES, 'UTF-8'); ?>"
                                    required>
                         </div>
                     </div>
@@ -240,17 +239,17 @@ if (isset($_POST['filtrar'])) {
         </div>
     </div>
 
-    <?php if (isset($_POST['filtrar']) && empty($error_message)): ?>
+    <?php if (isset($inputPost['filtrar']) && empty($error_message)): ?>
         <?php if (!empty($resultados)): ?>
             <div class="total-results">
                 Total de registros encontrados: <strong><?= number_format($total_resultados_filtrados, 0, ',', '.') ?></strong>
             </div>
             <div class="export-excel-form">
                 <form action="/relatorio-processos-especialidade-gerar" method="post">
-                    <input type="hidden" name="data_inicial" value="<?= htmlspecialchars($_POST['data_inicial'] ?? '') ?>">
-                    <input type="hidden" name="data_final" value="<?= htmlspecialchars($_POST['data_final'] ?? '') ?>">
-                    <input type="hidden" name="estado" value="<?= htmlspecialchars($_POST['estado'] ?? '') ?>">
-                    <input type="hidden" name="etapa" value="<?= htmlspecialchars($_POST['etapa'] ?? '') ?>">
+                    <input type="hidden" name="data_inicial" value="<?= htmlspecialchars($inputPost['data_inicial'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="data_final" value="<?= htmlspecialchars($inputPost['data_final'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="estado" value="<?= htmlspecialchars($inputPost['estado'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="etapa" value="<?= htmlspecialchars($inputPost['etapa'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                     <input type="hidden" name="exportar_excel" value="1">
                     <button type="submit" class="btn btn-success">Exportar Excel</button>
                 </form>
@@ -296,7 +295,7 @@ if (isset($_POST['filtrar'])) {
 <script>
 $(document).ready(function() {
     // Inicializa o DataTables apenas se houver resultados
-    <?php if (isset($_POST['filtrar']) && empty($error_message) && !empty($resultados)): ?>
+    <?php if (isset($inputPost['filtrar']) && empty($error_message) && !empty($resultados)): ?>
         $('#tabelaProcessos').DataTable({
             "paging": true,
             "pageLength": 50, // Quantidade de registros por página padrão

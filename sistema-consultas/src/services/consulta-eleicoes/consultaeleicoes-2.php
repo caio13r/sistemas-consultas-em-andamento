@@ -1,9 +1,9 @@
 <?php
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
+use PDO;
+use PDOException;
 
 Session::CheckSession();
 $users->checkAcess('CL2acesso');
@@ -12,10 +12,6 @@ $db = Database3::getInstance();
 $con = $db->getConnection();
 
 ?>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
 
 <style>
     .spinner-overlay {
@@ -99,13 +95,6 @@ $con = $db->getConnection();
         }
 </style>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Consulta de CPFs Duplicados - Eleições</title>
-</head>
-<body>
 <div class="container-fluid">
     <h1>Consulta Eleições - Ativos Duplicados em outro CRO pelo CPF</h1>
 
@@ -141,8 +130,10 @@ $con = $db->getConnection();
     if (isset($inputPost["submit"])) {
         $cro = $inputPost["cro"] ?? '';
         $croFilter = '';
-        if ($cro && $cro !== 'ALL') {
-            $croFilter = "AND CRO = '{$cro}'";
+        $croParam = null;
+        if ($cro && $cro !== 'ALL' && array_key_exists($cro, Helper::$ufList)) {
+            $croFilter = "AND CRO = :cro";
+            $croParam = $cro;
         }
         // Subconsulta base com nomes ASCII da tabela
         $eleicoesSub = "(SELECT 
@@ -182,6 +173,9 @@ $con = $db->getConnection();
             HAVING COUNT(DISTINCT CRO) > 1";
         try {
             $stmt = $con->prepare($subquery);
+            if ($croParam !== null) {
+                $stmt->bindValue(':cro', $croParam);
+            }
             $stmt->execute();
             $cpfsDuplicados = $stmt->fetchAll(PDO::FETCH_COLUMN);
             if (count($cpfsDuplicados) > 0) {
@@ -440,10 +434,4 @@ function verDetalhes(cpf) {
         hideSpinner();
     });
     </script>
-</div>
-</body>
-</html>
-
-<?php
-require_once INC_PATH . '/footer.php';
-?> 
+</div> 

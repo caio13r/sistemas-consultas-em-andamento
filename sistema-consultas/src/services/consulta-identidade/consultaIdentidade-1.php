@@ -7,7 +7,7 @@ $dotenv->load();
 use Cfo\SisConsultas\lib\Session;
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI1acesso']) && $row['CI1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -15,15 +15,16 @@ if (Session::get('grupo') != 0 && $row['CI1acesso'] == false) {
     exit;
 }
 
-$tipoConsulta = $_GET['tipoConsulta'] ?? '';
-$searchType = $_GET['searchType'] ?? 'name';
-$searchValue = $_GET['searchValue'] ?? '';
-$page_number = $_GET['page_number'] ?? 1;
-$page_amount = $_GET['page_amount'] ?? 100;
+$tipoConsulta = $inputGet['tipoConsulta'] ?? '';
+$searchType = $inputGet['searchType'] ?? 'name';
+$searchValue = $inputGet['searchValue'] ?? '';
+$page_number = $inputGet['page_number'] ?? 1;
+$page_amount = $inputGet['page_amount'] ?? 100;
 
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado.");
+    echo "<div class='alert alert-danger'>Token da API não configurado no .env</div>";
+    return;
 }
 
 // Obter URL base da API a partir de variável de ambiente
@@ -129,7 +130,9 @@ $endpoints = [
 ];
 
 if (!array_key_exists($searchType, $endpoints)) {
-    die("Tipo de pesquisa inválido.");
+    error_log("Consulta Identidade - Tipo de pesquisa inválido: " . $searchType);
+    echo "<div class='alert alert-danger'>Tipo de pesquisa inválido.</div>";
+    return;
 }
 ?>
 <!DOCTYPE html>

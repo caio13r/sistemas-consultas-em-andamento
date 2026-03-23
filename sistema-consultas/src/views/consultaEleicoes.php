@@ -4,8 +4,8 @@ require_once INC_PATH . '/header.php';
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\lib\Labels;
 
-$labels = new Labels();
-$labels = $labels->getChildLabelsPorSigla("CL");
+$labelsInstance = new Labels();
+$childLabels = $labelsInstance->getChildLabelsPorSigla("CL");
 
 // A ordem é controlada pelo sistema de display_order no gerenciamento de labels
 // Não aplicamos usort() aqui para respeitar a ordenação configurada
@@ -41,20 +41,20 @@ Session::CheckSession();
                             <h6>Eleições de 03/10/2025</h6>
                         </div>
                         <div class="card-body text-center">
-                            <?php foreach($labels as $label) { ?>
+                            <?php foreach($childLabels as $label) { ?>
                                 <?php if ($label['grupo'] == 0 && $label['disabled'] != 1){?>
-                                    <?php if (Session::get('grupo') === 0 || $row['CL'.$label['referencial'].'acesso'] == true) { ?>
-                                        <a href="/consulta-eleicoes?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                    <?php if (Session::get('grupo') === 0 || (isset($row['CL'.$label['referencial'].'acesso']) && $row['CL'.$label['referencial'].'acesso'] == true)) { ?>
+                                        <a href="/consulta-eleicoes?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
-                                                class="btn btn-<?= ($_GET['tipoConsulta'] ?? '') === (string)$label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
+                                                class="btn btn-<?= ($inputGet['tipoConsulta'] ?? '') === (string)$label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao']) ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -70,20 +70,20 @@ Session::CheckSession();
                             <h6>Eleições posteriores</h6>
                         </div>
                         <div class="card-body text-center">
-                            <?php foreach($labels as $label) { ?>
+                            <?php foreach($childLabels as $label) { ?>
                                 <?php if ($label['grupo'] == 1 && $label['disabled'] != 1){?>
-                                    <?php if (Session::get('grupo') === 0 || $row['CL'.$label['referencial'].'acesso'] == true) { ?>
-                                        <a href="/consulta-eleicoes?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                    <?php if (Session::get('grupo') === 0 || (isset($row['CL'.$label['referencial'].'acesso']) && $row['CL'.$label['referencial'].'acesso'] == true)) { ?>
+                                        <a href="/consulta-eleicoes?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
-                                                class="btn btn-<?= ($_GET['tipoConsulta'] ?? '') === (string)$label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
+                                                class="btn btn-<?= ($inputGet['tipoConsulta'] ?? '') === (string)$label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao']) ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -95,21 +95,17 @@ Session::CheckSession();
             </div>
 
             <?php
-                if(isset($inputGet['tipoConsulta'])) {
-                    require SERVICES_PATH . '/consulta-eleicoes/consultaeleicoes-' . $inputGet['tipoConsulta'] . '.php';
+                if (isset($inputGet['tipoConsulta'])) {
+                    $tipoConsulta = intval($inputGet['tipoConsulta']);
+                    $servicePath = SERVICES_PATH . '/consulta-eleicoes/consultaeleicoes-' . $tipoConsulta . '.php';
+                    if ($tipoConsulta >= 1 && $tipoConsulta <= 10 && file_exists($servicePath)) {
+                        require $servicePath;
+                    }
                 }
             ?>
         </div>
     </div>  
 </div>
-
-<style>
-.btn-container {
-    display: block;
-    width: 100%;
-    margin-bottom: 10px;
-}
-</style>
 
 <?php 
 require_once INC_PATH . '/footer.php';

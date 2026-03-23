@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF2acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF2acesso']) && $row['CF2acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -34,7 +34,7 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações sem Inscri
                     ?>
                     <option style="font-weight: bold;" disabled><b>Estados:</b></option>
                     <?php
-                      if (Session::get('grupo') === 0 || $row['CF2select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CF2select']) && $row['CF2select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -78,7 +78,9 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações sem Inscri
                             $stmt->execute();
                             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         } catch (PDOexception $error) {
-                            die("Erro ao retornar os dados: " . $error->getMessage());
+                            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+                            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+                            $result = [];
                         }
 
                         foreach($result as $val) {
@@ -95,24 +97,44 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações sem Inscri
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $croParam = null;
+    $pessoaParam = null;
+    $anoParam = null;
+
     if ($inputPost["cro"] === 'BR' || $inputPost["cro"] === null) {
         $croWhere = "T.CRO = 'BRASIL'";
     } else if ($inputPost["cro"] === 'ALL') {
         $croWhere = "CRO IS NOT NULL";
     } else {
-        $croWhere = "CRO LIKE '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croWhere = "CRO = :cro";
+        $croParam = $inputPost["cro"];
     }
 
     if ($inputPost["pessoa"] === 'ALL' || $inputPost["pessoa"] === null) {
         $pessoaWhere = "Pessoa IS NOT NULL";
     } else {
-        $pessoaWhere = "Pessoa LIKE '{$inputPost["pessoa"]}'";
+        $validPessoa = ['PF SEM INSCRIÇÃO', 'PJ SEM INSCRIÇÃO'];
+        if (!in_array($inputPost["pessoa"], $validPessoa)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Tipo de pessoa inválido.</div>";
+            return;
+        }
+        $pessoaWhere = "Pessoa = :pessoa";
+        $pessoaParam = $inputPost["pessoa"];
     }
 
     if ($inputPost["ano"] === 'ALL' || $inputPost["ano"] === null) {
         $anoWhere = "T.ANO IS NOT NULL";
     } else {
-        $anoWhere = "T.ANO LIKE '{$inputPost["ano"]}'";
+        if (!ctype_digit($inputPost["ano"])) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Ano inválido.</div>";
+            return;
+        }
+        $anoWhere = "T.ANO = :ano";
+        $anoParam = $inputPost["ano"];
     }
 
     try {
@@ -139,10 +161,15 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações sem Inscri
                     CASE WHEN T.CRO = 'BRASIL' THEN 1 ELSE 0 END, -- Coloca Brasil no final
                     T.CRO;";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
+        if ($pessoaParam !== null) { $stmt->bindValue(':pessoa', $pessoaParam); }
+        if ($anoParam !== null) { $stmt->bindValue(':ano', $anoParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -192,17 +219,17 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações sem Inscri
             <tbody>
                 <?php foreach ($result as $row) { ?>
                     <tr>
-                        <td><?= $row['ANO']; ?></td>
-                        <td><?= ($row['CRO'] == 'BRASIL') ? 'Brasil' : $row['CRO']; ?></td>
-                        <td><?= $row['Pessoa']; ?></td>
-                        <td><?= $row['Quantidade de Fiscalizações']; ?></td>
-                        <td><?= $row['Fiscalizações ON-LINE']; ?></td>
-                        <td><?= $row['Fiscalizações PROATIVAS']; ?></td>
-                        <td><?= $row['Fiscalizações REATIVAS']; ?></td>
-                        <td><?= $row['Fiscalizações NÃO INFORMADO']; ?></td>
-                        <td><?= $row['Fiscalizações Exercício Ilegal']; ?></td>
-                        <td><?= $row['Notificações (indícios de irregularidades)']; ?></td>
-                        <td><?= $row['Fiscalizações com Termo']; ?></td>
+                        <td><?= htmlspecialchars($row['ANO']); ?></td>
+                        <td><?= ($row['CRO'] == 'BRASIL') ? 'Brasil' : htmlspecialchars($row['CRO']); ?></td>
+                        <td><?= htmlspecialchars($row['Pessoa']); ?></td>
+                        <td><?= number_format($row['Quantidade de Fiscalizações'], 0, ',', '.'); ?></td>
+                        <td><?= number_format($row['Fiscalizações ON-LINE'], 0, ',', '.'); ?></td>
+                        <td><?= number_format($row['Fiscalizações PROATIVAS'], 0, ',', '.'); ?></td>
+                        <td><?= number_format($row['Fiscalizações REATIVAS'], 0, ',', '.'); ?></td>
+                        <td><?= number_format($row['Fiscalizações NÃO INFORMADO'], 0, ',', '.'); ?></td>
+                        <td><?= number_format($row['Fiscalizações Exercício Ilegal'], 0, ',', '.'); ?></td>
+                        <td><?= number_format($row['Notificações (indícios de irregularidades)'], 0, ',', '.'); ?></td>
+                        <td><?= number_format($row['Fiscalizações com Termo'], 0, ',', '.'); ?></td>
                     </tr>
                 <?php } ?>
             </tbody>

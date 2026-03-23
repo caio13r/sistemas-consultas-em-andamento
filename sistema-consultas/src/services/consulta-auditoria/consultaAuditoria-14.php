@@ -1,11 +1,13 @@
-<?php 
+<?php
+use PDO;
+use PDOException;
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CA14acesso'] == false) {
+if (Session::get('grupo') != 0 && (!isset($row['CA14acesso']) || $row['CA14acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -14,9 +16,8 @@ if (Session::get('grupo') != 0 && $row['CA14acesso'] == false) {
 }
 
 $tituloConsulta = 'Auditoria - Usuários do Sistema Implanta';
+$erro = '';
 ?>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <div class="col-md-6 offset-md-3 mb-4">
 <h6 class="mb-2">Consultar usuários do Sistema Implanta</h6>
@@ -27,19 +28,18 @@ $tituloConsulta = 'Auditoria - Usuários do Sistema Implanta';
                 <select id="cro" name="cro" class="form-control" required>
                     <option disabled selected value>Selecione</option>
                     <?php
-                      // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CA14select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CA14select']) && $row['CA14select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
-                            $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
-                        }            
+                            $selected = (($inputPost['cro'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
+                        }
                       } else {
                         foreach(Helper::$ufList as $val => $value) {
                           if ($users->CheckGroupUf() == $val) {
-                            $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
+                            $selected = (($inputPost['cro'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
                           }
-                        }   
+                        }
                       }
                     ?>
                 </select>
@@ -51,8 +51,8 @@ $tituloConsulta = 'Auditoria - Usuários do Sistema Implanta';
                     <?php
                         $values = array('ALL' => 'Todos', 'Ativo' => 'Ativo', 'Inativo' => 'Inativo');
                         foreach($values as $val => $value) {
-                            $selected = (!empty($inputPost['situacao']) && $inputPost['situacao'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
+                            $selected = (($inputPost['situacao'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
                         }
                     ?>
                 </select>
@@ -64,102 +64,111 @@ $tituloConsulta = 'Auditoria - Usuários do Sistema Implanta';
                     <?php
                         $values = array('ALL' => 'Todos', 'Sim' => 'Sim', 'Não' => 'Não');
                         foreach($values as $val => $value) {
-                            $selected = (!empty($inputPost['bloqueio']) && $inputPost['bloqueio'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
+                            $selected = (($inputPost['bloqueio'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
                         }
                     ?>
                 </select>
             </div>
             <div class="form-group col-md-6">
                 <label for="nome">Informe o Nome/Login:</label>
-                <input type="text" id="nome" name="nome" class="form-control" minlength="3" placeholder="Digite o nome" value="<?= $inputPost["nome"] ?>"></input>
-              </div>
+                <input type="text" id="nome" name="nome" class="form-control" minlength="3" placeholder="Digite o nome" value="<?= htmlspecialchars($inputPost['nome'] ?? '') ?>">
+            </div>
             <div class="form-group col-md-6">
                 <label for="cpf">Informe o CPF:</label>
-                <input type="text" id="cpf" name="cpf" onkeyup="mask('###.###.###-##', this, event, true)"  class="form-control" placeholder="Digite o CPF" value="<?= $inputPost["cpf"] ?>"></input>
+                <input type="text" id="cpf" name="cpf" onkeyup="mask('###.###.###-##', this, event, true)" class="form-control" placeholder="Digite o CPF" value="<?= htmlspecialchars($inputPost['cpf'] ?? '') ?>">
             </div>
             <div class="form-group col-md-12">
                 <label for="email">Informe o E-mail:</label>
-                <input type="text" id="email" name="email" class="form-control" minlength="5" placeholder="Digite o e-mail" value="<?= $inputPost["email"] ?>">
+                <input type="text" id="email" name="email" class="form-control" minlength="5" placeholder="Digite o e-mail" value="<?= htmlspecialchars($inputPost['email'] ?? '') ?>">
             </div>
-            
         </div>
         <button type="submit" name="submit" class="btn btn-primary">Pesquisar</button>
     </form>
 </div>
 
-<?php if (isset($inputPost["submit"])) { 
+<?php if (isset($inputPost["submit"])) {
 
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croQuery = 'CRO IS NOT NULL';
-    } else {
-        $croQuery = "CRO = '{$inputPost["cro"]}'";
+    $conditions = [];
+    $params = [];
+
+    if (!empty($inputPost['cro']) && $inputPost['cro'] !== 'ALL') {
+        if (!array_key_exists($inputPost['cro'], Helper::$ufList)) {
+            $erro = "Estado inválido.";
+        } else {
+            $conditions[] = "CRO = :cro";
+            $params[':cro'] = $inputPost['cro'];
+        }
     }
 
-    if ($inputPost["situacao"] === 'ALL' || $inputPost["situacao"] === null) {
-        $sitQuery = 'situacao IS NOT NULL';
-    } else {
-        $sitQuery = "situacao = '{$inputPost["situacao"]}'";
+    if (!empty($inputPost['situacao']) && $inputPost['situacao'] !== 'ALL') {
+        $conditions[] = "situacao = :situacao";
+        $params[':situacao'] = $inputPost['situacao'];
     }
 
-    if ($inputPost["bloqueio"] === 'ALL' || $inputPost["bloqueio"] === null) {
-        $bloqQuery = 'Bloqueado IS NOT NULL';
-    } else {
-        $bloqQuery = "Bloqueado = '{$inputPost["bloqueio"]}'";
+    if (!empty($inputPost['bloqueio']) && $inputPost['bloqueio'] !== 'ALL') {
+        $conditions[] = "Bloqueado = :bloqueio";
+        $params[':bloqueio'] = $inputPost['bloqueio'];
     }
 
-    if (empty($inputPost["nome"])) {
-        $nomeQuery = 'Nome IS NOT NULL';
-    } else {
-        // Busca tanto em Nome quanto em Login
-        $nome = $inputPost["nome"];
-        $nomeQuery = "(Nome LIKE '%$nome%' OR Login LIKE '%$nome%')";
+    if (!empty($inputPost['nome'])) {
+        $conditions[] = "(Nome LIKE :nome OR Login LIKE :nome2)";
+        $params[':nome'] = '%' . $inputPost['nome'] . '%';
+        $params[':nome2'] = '%' . $inputPost['nome'] . '%';
     }
 
-    if (empty($inputPost["cpf"])) {
-        $cpfQuery = 'CPF IS NOT NULL';
-    } else {
-        $cpfQuery = "CPF LIKE '%{$inputPost["cpf"]}%'"; // Aceitar qualquer parte do CPF
+    if (!empty($inputPost['cpf'])) {
+        $conditions[] = "CPF LIKE :cpf";
+        $params[':cpf'] = '%' . $inputPost['cpf'] . '%';
     }
 
-    // Filtro por e-mail
-    if (empty($inputPost["email"])) {
-        $emailQuery = "[E-mail] IS NOT NULL";
-    } else {
-        $email = $inputPost["email"];
-        $emailQuery = "[E-mail] LIKE '%$email%'";
+    if (!empty($inputPost['email'])) {
+        $conditions[] = "[E-mail] LIKE :email";
+        $params[':email'] = '%' . $inputPost['email'] . '%';
     }
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-    
-        $query = "SELECT [CRO], 
-                        [Nome], 
-                        [CPF], 
-                        [Login], 
-                        [E-mail], 
-                        [Data de criação], 
-                        [Grupo] as Grupos,  
-                        [Unidade] as Unidades,  
-                        [Bloqueado], 
-                        [situacao] as Situacao, 
-                        [Admin]  -- Adicionada a coluna Admin
-                    FROM [CFO_CWS].[dbo].[vw_Cons_Usuarios_Ativos_Inativos] 
-                    WHERE $croQuery AND $sitQuery AND $bloqQuery AND $nomeQuery AND $cpfQuery AND $emailQuery";
-        $stmt = $con->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $whereClause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
+
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+
+            $query = "SELECT [CRO],
+                        [Nome],
+                        [CPF],
+                        [Login],
+                        [E-mail],
+                        [Data de criação],
+                        [Grupo] as Grupos,
+                        [Unidade] as Unidades,
+                        [Bloqueado],
+                        [situacao] as Situacao,
+                        [Admin]
+                    FROM [CFO_CWS].[dbo].[vw_Cons_Usuarios_Ativos_Inativos]"
+                    . $whereClause;
+            $stmt = $con->prepare($query);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value, PDO::PARAM_STR);
+            }
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $error) {
+            error_log("Erro em auditoria 14: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> Não foi possível realizar a consulta.</div>";
+            $result = [];
+        }
     }
 ?>
 
 <?php if (!empty($result)) { ?>
     <div class="row justify-content-end mr-1">
         <form action="ExcelDownload" method="post">
-            <input type="hidden" name="tituloConsulta" value="<?= $tituloConsulta ?>">
-            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)); ?>">
+            <input type="hidden" name="tituloConsulta" value="<?= htmlspecialchars($tituloConsulta) ?>">
+            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)) ?>">
             <button type="submit" name="ExcelDownload" class="btn btn-md btn-success">Excel</button>
         </form>
     </div>
@@ -167,7 +176,7 @@ $tituloConsulta = 'Auditoria - Usuários do Sistema Implanta';
 
 <div class="row mt-4">
     <div class="col table-responsive">
-        <table id="tabelaConsultas14" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
+        <table id="tabelaAuditoria14" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
             <thead>
             <tr>
                 <th scope="col">CRO</th>
@@ -180,41 +189,38 @@ $tituloConsulta = 'Auditoria - Usuários do Sistema Implanta';
                 <th scope="col">UNIDADES</th>
                 <th scope="col">BLOQUEIO</th>
                 <th scope="col">SITUAÇÃO</th>
-                <th scope="col">ADMIN</th> <!-- Coluna Admin adicionada -->
+                <th scope="col">ADMIN</th>
             </tr>
             </thead>
             <tbody>
-            <?php
-                foreach ($result as $row) {
-                    echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Nome'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['Login'] . "</td>";
-                    echo "<td>" . $row['E-mail'] . "</td>";
-                    echo "<td>" . $row['Data de criação'] . "</td>";
-                    echo "<td>" . $row['Grupos'] . "</td>";
-                    echo "<td>" . $row['Unidades'] . "</td>";
-                    echo "<td>" . $row['Bloqueado'] . "</td>";
-                    echo "<td>" . $row['Situacao'] . "</td>";
-                    echo "<td>" . $row['Admin'] . "</td>"; // Exibindo o valor da coluna Admin
-                    echo "</tr>";
-                }
-            ?>
+            <?php foreach ($result as $linha) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($linha['CRO'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Nome'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['CPF'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Login'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['E-mail'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Data de criação'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Grupos'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Unidades'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Bloqueado'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Situacao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Admin'] ?? '') ?></td>
+                </tr>
+            <?php endforeach; ?>
             </tbody>
         </table>
-    </div>  
+    </div>
 </div>
 
-<!-- Inicialização do DataTables com idioma Português -->
 <script>
 $(document).ready(function() {
-    $('#tabelaConsultas14').DataTable({
+    $('#tabelaAuditoria14').DataTable({
         "paging": true,
         "pageLength": 10,
         "lengthMenu": [10, 25, 50, 100],
         "language": {
-            "url": "../assets/lang/pt-BR.json" // Verifique se o caminho para o arquivo de idioma está correto
+            "url": "../assets/lang/pt-BR.json"
         }
     });
 });

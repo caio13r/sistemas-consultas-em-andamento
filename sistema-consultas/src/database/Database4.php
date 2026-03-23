@@ -47,15 +47,23 @@ class Database4 {
 
       // Error handling
       } catch (Exception $e) {
-          die("Falha ao conectar ao banco de dados: " . $e->getMessage());
+          error_log("Database4 (Redis) - Falha ao conectar: " . $e->getMessage());
+          $this->connection = null;
       }
   }
 
   // Magic method clone is empty to prevent duplication of connection
   private function __clone () {}
 
+  public function isConnected(): bool {
+    return $this->connection !== null;
+  }
+
   // Get the connection
   public function getConnection () {
+      if ($this->connection === null) {
+        throw new \Exception("Conexão com Redis indisponível.");
+      }
       return $this->connection;
   }
 

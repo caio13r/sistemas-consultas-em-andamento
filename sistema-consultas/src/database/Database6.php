@@ -45,7 +45,9 @@ class Database6 {
 
     // Validar se todas as variáveis obrigatórias foram definidas
     if (empty($this->dbhost) || empty($this->dbuser) || empty($this->dbname)) {
-      die("Erro de configuração DB6: Verifique se as variáveis DB6_HOST, DB6_USERNAME e DB6_NAME estão definidas no arquivo .env");
+      error_log("Erro de configuração DB6: Variáveis DB6_HOST, DB6_USERNAME ou DB6_NAME não definidas no .env");
+      $this->connection = null;
+      return;
     }
 
     try {
@@ -56,16 +58,24 @@ class Database6 {
 
       // Error handling
     } catch (PDOException $e) {
-      die("Falha ao conectar ao banco de dados DB6: " . $e->getMessage() . "<br>Host: " . htmlspecialchars($this->dbhost) . " | Porta: " . $dbport . " | Banco: " . htmlspecialchars($this->dbname));
+      error_log("Database6 (MySQL) - Falha ao conectar: " . $e->getMessage());
+      $this->connection = null;
     }
   }
 
   // Magic method clone is empty to prevent duplication of connection
   private function __clone () {}
 
+  public function isConnected(): bool {
+    return $this->connection !== null;
+  }
+
   // Get the connection
   public function getConnection ()
   {
+    if ($this->connection === null) {
+      throw new PDOException("Conexão com MySQL (DB6) indisponível.");
+    }
     return $this->connection;
   }
 }

@@ -1,26 +1,24 @@
 <?php
 // Configurações básicas
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
 // Definir cabeçalho JSON imediatamente
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    // Verificar se é uma requisição AJAX
-    if (!isset($_POST['ajax_request']) || $_POST['ajax_request'] != '1') {
+    $inputPost = $_POST;
+
+    if (!isset($inputPost['ajax_request']) || $inputPost['ajax_request'] != '1') {
         throw new Exception('Requisição inválida');
     }
 
-    // Iniciar sessão
     session_start();
 
-    // Verificar se o usuário está logado
     if (!isset($_SESSION['login']) || $_SESSION['login'] !== true) {
         throw new Exception('Sessão expirada');
     }
 
-    // Verificar permissões
     $userGrupo = $_SESSION['grupo'] ?? 0;
     $userSubgrupo = $_SESSION['subgrupo'] ?? 0;
     $isAdmin = ($userGrupo == 0) || ($userGrupo == 1) || ($userSubgrupo == 1);
@@ -29,21 +27,18 @@ try {
         throw new Exception('Acesso negado');
     }
 
-    // Incluir arquivos necessários
     require_once realpath(__DIR__ . '/../../database/Database1.php');
 
     use Cfo\SisConsultas\database\Database1;
 
-    // Conectar ao banco
     $db = Database1::getInstance();
     $con = $db->getConnection();
 
-    // Processar ação
-    $action = $_POST['action'] ?? '';
+    $action = $inputPost['action'] ?? '';
 
     switch ($action) {
         case 'get':
-            $id = intval($_POST['id'] ?? 0);
+            $id = intval($inputPost['id'] ?? 0);
             if ($id <= 0) {
                 throw new Exception('ID inválido');
             }
@@ -61,7 +56,7 @@ try {
             break;
 
         case 'update':
-            $id = intval($_POST['id'] ?? 0);
+            $id = intval($inputPost['id'] ?? 0);
             if ($id <= 0) {
                 throw new Exception('ID inválido');
             }
@@ -69,9 +64,9 @@ try {
             $query = "UPDATE db_sistema_consultas.tbl_dados_lgpd_cros SET nome_autoridade_oficial_lai = ?, email_autoridade_lai = ?, telefone_autoridade_lai = ? WHERE id = ?";
             $stmt = $con->prepare($query);
             $result = $stmt->execute([
-                $_POST['nome_autoridade_oficial_lai'],
-                $_POST['email_autoridade_lai'],
-                $_POST['telefone_autoridade_lai'],
+                $inputPost['nome_autoridade_oficial_lai'] ?? '',
+                $inputPost['email_autoridade_lai'] ?? '',
+                $inputPost['telefone_autoridade_lai'] ?? '',
                 $id
             ]);
 

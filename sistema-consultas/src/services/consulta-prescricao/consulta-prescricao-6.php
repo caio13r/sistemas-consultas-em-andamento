@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RP1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RP1acesso']) && $row['RP1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-identidade';
@@ -23,7 +23,7 @@ $tituloConsulta = 'Consulta de Prescrições por Nome';
         <div class="form-row">
             <div class="form-group col-md-12">
                 <label for="paciente_nome">Preencha o nome do paciente:</label>
-                <input type="text" id="paciente_nome" name="paciente_nome" class="form-control" placeholder="Digite o nome do paciente" required value="<?= htmlspecialchars($_POST['paciente_nome'] ?? '') ?>">
+                <input type="text" id="paciente_nome" name="paciente_nome" class="form-control" placeholder="Digite o nome do paciente" required value="<?= htmlspecialchars($inputPost['paciente_nome'] ?? '') ?>">
             </div>
             <div class="form-group col-md-12">
                 <button type="submit" name="submit" class="btn btn-primary">Pesquisar</button>
@@ -33,8 +33,8 @@ $tituloConsulta = 'Consulta de Prescrições por Nome';
 </div>
 
 <?php
-if (isset($_POST["submit"])) {
-    $pacienteNome = trim($_POST["paciente_nome"]);
+if (isset($inputPost["submit"])) {
+    $pacienteNome = trim($inputPost["paciente_nome"]);
 
     try {
         $db = Database5::getInstance();

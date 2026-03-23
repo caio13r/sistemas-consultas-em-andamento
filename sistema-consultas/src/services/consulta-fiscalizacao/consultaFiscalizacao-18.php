@@ -1,13 +1,11 @@
 <?php 
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF10acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row) && isset($row['CF10acesso']) && $row['CF10acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -56,32 +54,44 @@ $tituloConsulta = 'Estatísticas de Fiscalizações de Idade - Por Período';
 
 <?php if (isset($inputPost["submit"])) { 
 
-    $cro = $inputPost["cro"];
-    $categoria = $inputPost["categoria"];
+    $erro = '';
+
+    if (!array_key_exists($inputPost["cro"], Helper::$ufList_withoutAll)) {
+        $erro = "Estado inválido.";
+    }
+
     $data_inicial = strval($inputPost["data_inicial"]);
     $data_termino = strval($inputPost["data_termino"]);
 
-    
-    $cro = "[cro_$cro]";
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $cro = "[cro_" . $inputPost["cro"] . "]";
 
-    $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao18.sql";
-    $myfile = fopen($path, "r") or die("Unable to open file!");
-    $script .= fread($myfile, filesize($path));
-    fclose($myfile);
+        $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao18.sql";
+        $myfile = fopen($path, "r") or die("Unable to open file!");
+        $script = fread($myfile, filesize($path));
+        fclose($myfile);
 
-    $script = str_replace(':banco', $cro, $script);
-    $script = str_replace(':inicio', $data_inicial, $script);
-    $script = str_replace(':termino', $data_termino, $script);
+        $script = str_replace(':banco', $cro, $script);
+        $script = str_replace("':inicio'", ":data_inicio", $script);
+        $script = str_replace("':termino'", ":data_fim", $script);
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-        $stmt = $con->prepare($script);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+            $stmt = $con->prepare($script);
+            $stmt->bindValue(':data_inicio', $data_inicial);
+            $stmt->bindValue(':data_fim', $data_termino);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        } catch (PDOException $error) {
+            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+            $result = [];
+        }
     }
 
 ?>
@@ -123,14 +133,14 @@ $tituloConsulta = 'Estatísticas de Fiscalizações de Idade - Por Período';
                     echo "<tr>";
                     echo "<td>" . $inicio . "</td>";
                     echo "<td>" . $termino . "</td>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Idade'] . "</td>";
-                    echo "<td>" . $row['APD'] . "</td>";
-                    echo "<td>" . $row['ASB'] . "</td>";
-                    echo "<td>" . $row['CD'] . "</td>";
-                    echo "<td>" . $row['TPD'] . "</td>";
-                    echo "<td>" . $row['TSB'] . "</td>";
-                    echo "<td>" . $row['Total_geral'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Idade']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['APD']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['ASB']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CD']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['TPD']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['TSB']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Total_geral']) . "</td>";
                     echo "</tr>";
                 }
             ?>

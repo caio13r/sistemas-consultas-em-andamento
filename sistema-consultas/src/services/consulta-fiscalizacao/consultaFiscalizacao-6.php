@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF6acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF6acesso']) && $row['CF6acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -34,7 +34,7 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Denúncias';
                     <option style="font-weight: bold;" disabled><b>Estados:</b></option>
                     <?php
                       // Validação de Acesso às UFs 
-                      if (Session::get('grupo') === 0 || $row['CF6select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CF6select']) && $row['CF6select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -67,7 +67,9 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Denúncias';
                             $stmt->execute();
                             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         } catch (PDOexception $error) {
-                            die("Erro ao retornar os dados: " . $error->getMessage());
+                            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+                            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+                            $result = [];
                         }
 
                         foreach($result as $val) {
@@ -88,17 +90,31 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Denúncias';
 
 <?php if (isset($inputPost["submit"])) { 
 
-    // Construção dos filtros da query
+    $croParam = null;
+    $anoParam = null;
+
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
         $croWhere = "CRO IS NOT NULL";
+    } else if ($inputPost["cro"] === 'BRASIL') {
+        $croWhere = "CRO = 'BRASIL'";
     } else {
-        $croWhere = "CRO LIKE '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croWhere = "CRO = :cro";
+        $croParam = $inputPost["cro"];
     }
 
     if ($inputPost["ano"] === 'ALL' || $inputPost["ano"] === null) {
         $anoWhere = "ANO IS NOT NULL";
     } else {
-        $anoWhere = "ANO LIKE '{$inputPost["ano"]}'";
+        if (!ctype_digit($inputPost["ano"])) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Ano inválido.</div>";
+            return;
+        }
+        $anoWhere = "ANO = :ano";
+        $anoParam = $inputPost["ano"];
     }
 
     // Executando a query
@@ -122,10 +138,14 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Denúncias';
                     CASE WHEN ED.Origem = 'TOTAL' THEN 1 ELSE 0 END,
                     ED.Origem;";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
+        if ($anoParam !== null) { $stmt->bindValue(':ano', $anoParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -157,9 +177,9 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Denúncias';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['ANO'] . "</td>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Origem'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['ANO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Origem']) . "</td>";
                     echo "<td>" . number_format($row['Quantidade_Denuncias'], 0, ',', '.') . "</td>";
                     echo "<td>" . number_format($row['Denuncias_Anonimas'], 0, ',', '.') . "</td>";
                     echo "<td>" . number_format($row['Denuncias_Identificadas'], 0, ',', '.') . "</td>";

@@ -19,23 +19,24 @@ if (Session::get('grupo') != 0 && (isset($row['CI21acesso']) && $row['CI21acesso
 
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado.");
+    error_log("consultaIdentidade-21: Token da API não configurado.");
+    echo "<div class='alert alert-danger'>Erro interno: configuração da API indisponível. Contate o administrador.</div>";
+    return;
 }
 
 // Inicializa variáveis para os campos do formulário
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $start_date_form = $_POST['start_date'] ?? '';
-    $end_date_form = $_POST['end_date'] ?? '';
+    $start_date_form = $inputPost['start_date'] ?? '';
+    $end_date_form = $inputPost['end_date'] ?? '';
 } else {
-    // Se não veio do POST, define padrão: hoje e um mês atrás
     $end_date_form = date('Y-m-d');
     $start_date_form = date('Y-m-d', strtotime('-1 month'));
 }
-$uf_form = $_POST['uf'] ?? 'BRASIL'; // Valor padrão agora é BRASIL (todos)
+$uf_form = $inputPost['uf'] ?? 'BRASIL';
 
 // Variáveis para mensagens de erro ou status
 $error_message = '';
-$is_form_submitted = isset($_POST['submit_query']);
+$is_form_submitted = isset($inputPost['submit_query']);
 
 // Definir um page_amount alto (para quando a API estiver pronta)
 $page_amount = 100000; // Aumentado para buscar mais registros

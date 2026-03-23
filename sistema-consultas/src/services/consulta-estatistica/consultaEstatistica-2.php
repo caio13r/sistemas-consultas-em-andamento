@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE2acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE2acesso']) && $row['CE2acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -27,7 +27,9 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Categoria x Ano de Registro
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -41,7 +43,7 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Categoria x Ano de Registro
                     <option disabled selected value>Selecione</option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CE2select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CE2select']) && $row['CE2select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -90,10 +92,24 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Categoria x Ano de Registro
 
 <?php if (isset($inputPost["submit"])) { 
 
+$croCondition = "";
+$croParam = null;
 if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-    $croTable = 'WHERE CRO IS NOT NULL';
+    $croCondition = 'WHERE CRO IS NOT NULL';
 } else {
-    $croTable = "WHERE CRO = '{$inputPost["cro"]}'";
+    if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+        return;
+    }
+    $croCondition = "WHERE CRO = :cro";
+    $croParam = $inputPost["cro"];
+}
+
+if ($inputPost["categoria"] !== 'ALL' && $inputPost["categoria"] !== null) {
+    if (!array_key_exists($inputPost["categoria"], Helper::$catListPf)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Categoria inválida.</div>";
+        return;
+    }
 }
 
 if ($inputPost["categoria"] === 'ALL' || $inputPost["categoria"] === null) {
@@ -118,13 +134,15 @@ try {
     $db = Database3::getInstance();
     $con = $db->getConnection();
 
-    $query = "SELECT CRO, ANO_REGISTRO, $catTable FROM CFO_CWS.dbo.vw_Cons_Consolidados_Inscricao_Categoria_Ano_Mes $croTable $regTable ORDER BY ANO_REGISTRO ASC";
+    $query = "SELECT CRO, ANO_REGISTRO, $catTable FROM CFO_CWS.dbo.vw_Cons_Consolidados_Inscricao_Categoria_Ano_Mes $croCondition $regTable ORDER BY ANO_REGISTRO ASC";
     $stmt = $con->prepare($query);
-    // $stmt->bindValue(':cro', "{$inputPost["cro"]}", PDO::PARAM_STR);
+    if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
     $stmt->execute();
     $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("Erro consulta estatistica: " . $error->getMessage());
+    echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+    $result = [];
 }
 
 $total_CD_FEM = array_sum(array_column($result, 'TOT_CD_FEM'));
@@ -190,9 +208,9 @@ $total_TOTAL_CRO = array_sum(array_column($result, 'TOTAL_GERAL'));
                         <th scope="col">TSB FEM</th>
                         <th scope="col">TOTAL FEM</th>
                 <?php } } else { ?>
-                    <th scope="col"><?= $inputPost["categoria"] ?> FEMININO</th>
-                    <th scope="col"><?= $inputPost["categoria"] ?> MASCULINO</th>
-                    <th scope="col"><?= $inputPost["categoria"] ?> GERAL</th>
+                    <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> FEMININO</th>
+                    <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> MASCULINO</th>
+                    <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> GERAL</th>
                 <?php } ?>
             </tr>
             </thead>
@@ -208,8 +226,8 @@ $total_TOTAL_CRO = array_sum(array_column($result, 'TOTAL_GERAL'));
                         if ($inputPost["sexo"] === 'ALL' || $inputPost["sexo"] === null) {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['ANO_REGISTRO'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['ANO_REGISTRO']) . "</td>";
                                 echo "<td>" . number_format($row["TOT_CD_FEM"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TOT_CD_MAS"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TOT_APD_FEM"], 0, ',', '.') . "</td>";
@@ -247,8 +265,8 @@ $total_TOTAL_CRO = array_sum(array_column($result, 'TOTAL_GERAL'));
                         } elseif ($inputPost["sexo"] === 'FEM') {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['ANO_REGISTRO'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['ANO_REGISTRO']) . "</td>";
                                 echo "<td>" . number_format($row["TOT_CD_FEM"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TOT_APD_FEM"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TOT_TPD_FEM"], 0, ',', '.') . "</td>";
@@ -272,8 +290,8 @@ $total_TOTAL_CRO = array_sum(array_column($result, 'TOTAL_GERAL'));
                         } elseif ($inputPost["sexo"] === 'MAS') {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['ANO_REGISTRO'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['ANO_REGISTRO']) . "</td>";
                                 echo "<td>" . number_format($row["TOT_CD_MAS"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TOT_APD_MAS"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TOT_TPD_MAS"], 0, ',', '.') . "</td>";
@@ -297,8 +315,8 @@ $total_TOTAL_CRO = array_sum(array_column($result, 'TOTAL_GERAL'));
                         } } else {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['ANO_REGISTRO'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['ANO_REGISTRO']) . "</td>";
                                 echo "<td>" . number_format($row["$var"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["$var1"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["$var"]+$row["$var1"], 0, ',', '.') . "</td>";

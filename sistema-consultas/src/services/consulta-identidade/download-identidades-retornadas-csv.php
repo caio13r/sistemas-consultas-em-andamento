@@ -17,10 +17,9 @@ ini_set('post_max_size', '100M');
 ini_set('upload_max_filesize', '100M');
 
 try {
-    // Pegar parâmetros da URL
-    $start_date = $_GET['start_date'] ?? date('Y-m-d', strtotime('-1 month'));
-    $end_date = $_GET['end_date'] ?? date('Y-m-d');
-    $uf = $_GET['uf'] ?? 'BRASIL';
+    $start_date = trim($_GET['start_date'] ?? date('Y-m-d', strtotime('-1 month')));
+    $end_date = trim($_GET['end_date'] ?? date('Y-m-d'));
+    $uf = trim($_GET['uf'] ?? 'BRASIL');
     
     $token = $_ENV['API_TOKEN'] ?? null;
     if (!$token) {
@@ -126,8 +125,8 @@ try {
     fclose($output);
     
 } catch (Exception $e) {
-    // Em caso de erro, retornar erro 500
+    error_log("download-identidades-retornadas-csv: " . $e->getMessage());
     http_response_code(500);
-    echo "Erro no download: " . $e->getMessage();
+    echo "Erro no download. Contate o administrador.";
 }
 ?> 

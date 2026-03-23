@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RP1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RP1acesso']) && $row['RP1acesso'] == false)) {
   echo "<script language='javascript'>
   window.alert('Você não tem permissão para acessar essa página.')
   window.location.href='consulta-identidade';
@@ -41,9 +41,9 @@ $dataInicial = date('Y-m-d\TH:i', strtotime('-30 days'));
 </div>
 
 <?php
-if (isset($_POST["submit"])) {
-  $dataInicial = $_POST["data_inicial"];
-  $dataFinal = $_POST["data_final"];
+if (isset($inputPost["submit"])) {
+  $dataInicial = $inputPost["data_inicial"];
+  $dataFinal = $inputPost["data_final"];
 }
 
 // Converter as datas para o formato esperado pelo banco de dados
@@ -97,7 +97,10 @@ try {
   // Ordenar o array associativo pela chave (tipo)
   ksort($quantidadePorTipo);
 } catch (PDOexception $error) {
-  die("Erro ao retornar os dados: " . $error->getMessage());
+  error_log("Erro consulta prescricao-1: " . $error->getMessage());
+  echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+  $result = [];
+  $quantidadePorTipo = [];
 }
 
 if (count($result) > 0) {

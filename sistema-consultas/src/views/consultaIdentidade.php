@@ -44,18 +44,18 @@ Session::CheckSession();
                         <div class="card-body text-start">
                             <?php foreach($buttons as $label) { ?>
                                 <?php if ($label['grupo'] == 0 && $label['disabled'] == 0) { ?>
-                                    <?php if (Session::get('grupo') === 0 || $row['CI' . $label['referencial'] . 'acesso'] == true) { ?>
-                                        <a href="/consulta-identidade?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                    <?php if (Session::get('grupo') === 0 || (isset($row['CI' . $label['referencial'] . 'acesso']) && $row['CI' . $label['referencial'] . 'acesso'] == true)) { ?>
+                                        <a href="/consulta-identidade?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
-                                                class="btn btn-<?= ($_GET['tipoConsulta'] ?? '') === $label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
+                                                class="btn btn-<?= ($inputGet['tipoConsulta'] ?? '') === $label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao']) ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -74,18 +74,18 @@ Session::CheckSession();
                         <div class="card-body text-start">
                             <?php foreach($buttons as $label) { ?>
                                 <?php if ($label['grupo'] == 1 && $label['disabled'] == 0) { ?>
-                                    <?php if (Session::get('grupo') === 0 || $row['CI' . $label['referencial'] . 'acesso'] == true) { ?>
-                                        <a href="/consulta-identidade?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                    <?php if (Session::get('grupo') === 0 || (isset($row['CI' . $label['referencial'] . 'acesso']) && $row['CI' . $label['referencial'] . 'acesso'] == true)) { ?>
+                                        <a href="/consulta-identidade?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
-                                                class="btn btn-<?= ($_GET['tipoConsulta'] ?? '') === $label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
+                                                class="btn btn-<?= ($inputGet['tipoConsulta'] ?? '') === $label['referencial'] ? 'primary active' : 'secondary' ?> btn-md btn-edit"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao']) ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -97,13 +97,19 @@ Session::CheckSession();
             </div>
 
             <?php
-                if (isset($_GET['tipoConsulta'])) {
-                    // Verifica se é um cadastro
-                    if (strpos($_GET['tipoConsulta'], 'cadastro') === 0) {
-                        require_once SERVICES_PATH . '/cadastro/' . $_GET['tipoConsulta'] . '.php';
+                if (isset($inputGet['tipoConsulta'])) {
+                    $tipoConsulta = $inputGet['tipoConsulta'];
+                    if (preg_match('/^cadastro[a-zA-Z0-9_-]+$/', $tipoConsulta)) {
+                        $servicePath = SERVICES_PATH . '/cadastro/' . $tipoConsulta . '.php';
+                        if (file_exists($servicePath)) {
+                            require_once $servicePath;
+                        }
                     } else {
-                        // Consultas normais de identidade
-                        require_once SERVICES_PATH . '/consulta-identidade/consultaIdentidade-' . $_GET['tipoConsulta'] . '.php';
+                        $tipoConsultaInt = intval($tipoConsulta);
+                        $servicePath = SERVICES_PATH . '/consulta-identidade/consultaIdentidade-' . $tipoConsultaInt . '.php';
+                        if ($tipoConsultaInt >= 1 && $tipoConsultaInt <= 30 && file_exists($servicePath)) {
+                            require_once $servicePath;
+                        }
                     }
                 }
             ?>

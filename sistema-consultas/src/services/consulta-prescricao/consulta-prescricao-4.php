@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RP1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RP1acesso']) && $row['RP1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-identidade';
@@ -58,10 +58,10 @@ $dataInicial = date('Y-m-d\TH:i', strtotime('-30 days'));
 </div>
 
 <?php
-if (isset($_POST["submit"])) {
-    $dataInicial = $_POST["data_inicial"];
-    $dataFinal = $_POST["data_final"];
-    $ufSelecionada = $_POST["uf"];
+if (isset($inputPost["submit"])) {
+    $dataInicial = $inputPost["data_inicial"];
+    $dataFinal = $inputPost["data_final"];
+    $ufSelecionada = $inputPost["uf"];
 } else {
     $ufSelecionada = "todos";
 }
@@ -148,7 +148,10 @@ try {
     $stmtTabela->execute();
     $resultTabela = $stmtTabela->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("Erro consulta prescricao-4: " . $error->getMessage());
+    echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+    $resultTabela = [];
+    $quantidadePorEstado = [];
 }
 
 if (count($resultTabela) > 0) {
@@ -180,11 +183,11 @@ if (count($resultTabela) > 0) {
                     <?php
                     foreach ($resultTabela as $row) {
                         echo "<tr>";
-                        echo "<td>" . $row['uf'] . "</td>";
-                        echo "<td>" . $row['insc'] . "</td>";
-                        echo "<td>" . $row['cd_nome'] . "</td>";
-                        echo "<td>" . $row['paciente_nome'] . "</td>";
-                        echo "<td>" . $row['tipo'] . "</td>";
+                        echo "<td>" . htmlspecialchars($row['uf']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['insc']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['cd_nome']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['paciente_nome']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['tipo']) . "</td>";
                         echo "<td>" . date('d-m-Y H:i', strtotime($row['data'])) . "</td>";
                         echo "</tr>";
                     }

@@ -1,13 +1,11 @@
 <?php 
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF10acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row) && isset($row['CF10acesso']) && $row['CF10acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -44,26 +42,38 @@ $tituloConsulta = 'Estatísticas de Nomes dos Fiscais';
 </div>
 
 <?php if (isset($inputPost["submit"])) { 
-    $cro = $inputPost["cro"];
 
-    $cro = "[cro_$cro]";
+    $erro = '';
 
-    $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao20.sql";
-    $myfile = fopen($path, "r") or die("Unable to open file!");
-    $script .= fread($myfile, filesize($path));
-    fclose($myfile);
+    if (!array_key_exists($inputPost["cro"], Helper::$ufList_withoutAll)) {
+        $erro = "Estado inválido.";
+    }
 
-    $script = str_replace(':banco', $cro, $script);
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $cro = "[cro_" . $inputPost["cro"] . "]";
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-        $stmt = $con->prepare($script);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao20.sql";
+        $myfile = fopen($path, "r") or die("Unable to open file!");
+        $script = fread($myfile, filesize($path));
+        fclose($myfile);
 
-    } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        $script = str_replace(':banco', $cro, $script);
+
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+            $stmt = $con->prepare($script);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (PDOException $error) {
+            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+            $result = [];
+        }
     }
 ?>
 
@@ -93,10 +103,10 @@ $tituloConsulta = 'Estatísticas de Nomes dos Fiscais';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Nome_Fiscal'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['Usuario_Sistema'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Nome_Fiscal']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CPF']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Usuario_Sistema']) . "</td>";
                     echo "</tr>";
                 }
             ?>

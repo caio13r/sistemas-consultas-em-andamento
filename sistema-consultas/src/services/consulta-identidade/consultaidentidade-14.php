@@ -8,7 +8,7 @@ Session::CheckSession();
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
 $dotenv->load();
 
-if (Session::get('grupo') != 0 && $row['CI1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI1acesso']) && $row['CI1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.');
     window.location.href='consulta-auditoria';
@@ -18,7 +18,9 @@ if (Session::get('grupo') != 0 && $row['CI1acesso'] == false) {
 
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado.");
+    error_log("Token da API não configurado.");
+    echo "<div class='alert alert-danger'>Token da API não configurado.</div>";
+    return;
 }
 
 $start_date = '';
@@ -27,14 +29,14 @@ $start_display = '';
 $end_display = '';
 $data = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
-    if (isset($_POST['start_date'])) {
-        $start_display = $_POST['start_date'];
-        $start_date = date('d/m/Y 00:00:00', strtotime($_POST['start_date']));
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($inputPost['submit'])) {
+    if (isset($inputPost['start_date'])) {
+        $start_display = $inputPost['start_date'];
+        $start_date = date('d/m/Y 00:00:00', strtotime($inputPost['start_date']));
     }
-    if (isset($_POST['end_date'])) {
-        $end_display = $_POST['end_date'];
-        $end_date = date('d/m/Y 23:59:59', strtotime($_POST['end_date']));
+    if (isset($inputPost['end_date'])) {
+        $end_display = $inputPost['end_date'];
+        $end_date = date('d/m/Y 23:59:59', strtotime($inputPost['end_date']));
     }
 
     $endpoint = 'http://192.168.161.165:8082/api/consulta/postagem/estatistica/total';

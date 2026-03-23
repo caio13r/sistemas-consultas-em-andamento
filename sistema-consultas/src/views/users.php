@@ -71,8 +71,8 @@ if (isset($activeId)) {
                       >
 
                         <td><span style="font-size: 14px;"><?= $i; ?></span></td>
-                        <td><span style="font-size: 14px;"><?= $value->name; ?></span></td>
-                        <td><span style="font-size: 14px;"><?= $value->email; ?></span></td>
+                        <td><span style="font-size: 14px;"><?= htmlspecialchars($value->name); ?></span></td>
+                        <td><span style="font-size: 14px;"><?= htmlspecialchars($value->email); ?></span></td>
                         <td><span class="badge badge-lg badge-dark text-white"><?= $users->GroupName($value->grupo); ?></span></td>
                         <td><span class="badge badge-lg badge-dark text-white"><?= $users->SubGroupName($value->subgrupo); ?></span></td>
                         <td>

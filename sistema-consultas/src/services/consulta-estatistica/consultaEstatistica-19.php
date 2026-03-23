@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE19acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE19acesso']) && $row['CE19acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -47,30 +47,51 @@ $tituloConsulta = 'Totalização de profissionais e empresas ativos por ano (úl
 
 <?php if (isset($inputPost["submit"])) { 
     
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croQuery = 'CRO IS NOT NULL';
+    $croCondition = "";
+    $croParam = null;
+    if (empty($inputPost["cro"]) || $inputPost["cro"] === 'ALL' || $inputPost["cro"] === 'Brasil') {
+        $croCondition = "CRO IS NOT NULL";
     } else {
-        $croQuery = "CRO = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croCondition = "CRO = :cro";
+        $croParam = $inputPost["cro"];
     }
 
-    if ($inputPost["ano"] === 'ALL' || $inputPost["ano"] === null) {
-        $anoQuery = 'Ate_Ano IS NOT NULL';
+    $anoCondition = "";
+    $anoParam = null;
+    if (empty($inputPost["ano"]) || $inputPost["ano"] === 'ALL') {
+        $anoCondition = "Ate_Ano IS NOT NULL";
     } else {
-        $anoQuery = "Ate_Ano = '{$inputPost["ano"]}'";
+        if (!ctype_digit($inputPost["ano"])) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Ano inválido.</div>";
+            return;
+        }
+        $anoCondition = "Ate_Ano = :ano";
+        $anoParam = $inputPost["ano"];
     }
     
-    $query = "SELECT * FROM CFO_CWS.dbo.Cons_Total_Inscritos_Ativos_Por_Ano_Por_Categoria WHERE $croQuery AND $anoQuery";
+    $query = "SELECT * FROM CFO_CWS.dbo.Cons_Total_Inscritos_Ativos_Por_Ano_Por_Categoria WHERE $croCondition AND $anoCondition";
     
     try {
         $db = Database3::getInstance();
         $con = $db->getConnection();
     
         $stmt = $con->prepare($query);
+        if ($croParam !== null) {
+            $stmt->bindValue(':cro', $croParam);
+        }
+        if ($anoParam !== null) {
+            $stmt->bindValue(':ano', $anoParam);
+        }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        // echo $query;
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
     
 ?>
@@ -107,17 +128,17 @@ $tituloConsulta = 'Totalização de profissionais e empresas ativos por ano (úl
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['Ate_Ano'] . "</td>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['APD'] . "</td>";
-                    echo "<td>" . $row['ASB'] . "</td>";
-                    echo "<td>" . $row['CD'] . "</td>";
-                    echo "<td>" . $row['ECIPO'] . "</td>";
-                    echo "<td>" . $row['EPAO'] . "</td>";
-                    echo "<td>" . $row['LB'] . "</td>";
-                    echo "<td>" . $row['TPD'] . "</td>";
-                    echo "<td>" . $row['TSB'] . "</td>";
-                    echo "<td>" . $row['TOTAL'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Ate_Ano']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['APD']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['ASB']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CD']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['ECIPO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['EPAO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['LB']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['TPD']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['TSB']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['TOTAL']) . "</td>";
                     echo "</tr>";
                 }
             ?>

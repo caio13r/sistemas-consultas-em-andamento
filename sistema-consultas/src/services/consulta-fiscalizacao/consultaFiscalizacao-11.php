@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF10acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF10acesso']) && $row['CF10acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -73,35 +73,49 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Termos - Por Categoria e
     $data_inicial = strval($inputPost["data_inicial"]);
     $data_termino = strval($inputPost["data_termino"]);
 
-    
-    $cro = "[cro_$cro]";
-    
-    if ($inputPost['categoria'] == 'ALL' || $inputPost['categoria'] == '') {
-        $categoria = "%%";
-    }else{
-        $categoria = "$categoria";
+    $erro = '';
+    if (!array_key_exists($cro, Helper::$ufList_withoutAll)) {
+        $erro = "Estado inválido.";
     }
-    
+    if ($categoria !== 'ALL' && $categoria !== '' && !array_key_exists($categoria, Helper::$catList)) {
+        $erro = "Categoria inválida.";
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data_inicial) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data_termino)) {
+        $erro = "Data inválida.";
+    }
 
-    $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao11.sql";
-    $myfile = fopen($path, "r") or die("Unable to open file!");
-    $script .= fread($myfile, filesize($path));
-    fclose($myfile);
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $cro = "[cro_$cro]";
+        
+        if ($inputPost['categoria'] == 'ALL' || $inputPost['categoria'] == '') {
+            $categoria = "%%";
+        }
 
-    $script = str_replace(':banco', $cro, $script);
-    $script = str_replace(':categoria', $categoria, $script);
-    $script = str_replace(':inicio', $data_inicial, $script);
-    $script = str_replace(':termino', $data_termino, $script);
+        $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao11.sql";
+        $myfile = fopen($path, "r") or die("Unable to open file!");
+        $script .= fread($myfile, filesize($path));
+        fclose($myfile);
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-        $stmt = $con->prepare($script);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $script = str_replace(':banco', $cro, $script);
+        $script = str_replace(':categoria', $categoria, $script);
+        $script = str_replace(':inicio', $data_inicial, $script);
+        $script = str_replace(':termino', $data_termino, $script);
 
-    } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+            $stmt = $con->prepare($script);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (PDOexception $error) {
+            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+            $result = [];
+        }
     }
 
 ?>
@@ -145,20 +159,20 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Termos - Por Categoria e
                     $termino = date('d/m/Y', strtotime($row['Data_Fim_Termo']));
 
                     echo "<tr>";
-                    echo "<td>" . $inicio . "</td>";
-                    echo "<td>" . $termino . "</td>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Categoria'] . "</td>";
-                    echo "<td>" . $row['Ano_Total_Ativos'] . "</td>";
-                    echo "<td>" . $row['Total_Ativos'] . "</td>";
-                    echo "<td>" . $row['Ano_Fiscalizacoes_Com_Termo'] . "</td>";
-                    echo "<td>" . $row['Fiscalizacoes_Com_Termo'] . "</td>";
-                    echo "<td>" . $row['Porcentagem_Fiscalizado_Com_Termo'] . "</td>";
-                    echo "<td>" . $row['Fiscalizacoes_Proativas'] . "</td>";
-                    echo "<td>" . $row['Fiscalizacoes_Reativas'] . "</td>";
-                    echo "<td>" . $row['Fiscalizacoes_Online'] . "</td>";
-                    echo "<td>" . $row['Fiscalizacoes_Exercicio_Ilegal'] . "</td>";
-                    echo "<td>" . $row['Notificacoes_Com_Indicios_de_Irregularidades'] . "</td>";
+                    echo "<td>" . htmlspecialchars($inicio) . "</td>";
+                    echo "<td>" . htmlspecialchars($termino) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Categoria']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Ano_Total_Ativos']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Total_Ativos']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Ano_Fiscalizacoes_Com_Termo']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Fiscalizacoes_Com_Termo']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Porcentagem_Fiscalizado_Com_Termo']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Fiscalizacoes_Proativas']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Fiscalizacoes_Reativas']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Fiscalizacoes_Online']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Fiscalizacoes_Exercicio_Ilegal']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Notificacoes_Com_Indicios_de_Irregularidades']) . "</td>";
                     echo "</tr>";
                 }
             ?>

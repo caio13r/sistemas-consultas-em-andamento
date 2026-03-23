@@ -11,11 +11,15 @@ Session::init();
 Session::CheckSession();
 $users = new Users();
 
-// Recupera o CRO enviado via POST
-$uf = $_POST['uf'] ?? 'ALL';
+$inputPost = $_POST;
 
-// Validação: se não houver valor, redireciona com alerta
-if (!isset($_POST['uf']) || empty($uf)) {
+$validUFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO','ALL'];
+$uf = strtoupper(trim($inputPost['uf'] ?? 'ALL'));
+if (!in_array($uf, $validUFs)) {
+    $uf = 'ALL';
+}
+
+if (!isset($inputPost['uf']) || empty($uf)) {
     echo "<script language='javascript'>
             alert('Algo deu errado, é necessário selecionar o CRO.');
             window.location.href='delegado-eleitor';

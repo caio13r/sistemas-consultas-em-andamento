@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI4acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI4acesso']) && $row['CI4acesso'] == false)) {
   echo "<script language='javascript'>
   window.alert('Você não tem permissão para acessar essa página.')
   window.location.href='consulta-identidade';
@@ -31,7 +31,9 @@ $tituloConsulta = 'Estatísticas - Consulta CFO ID única';
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Consulta Identidade 4 - Erro PDO: " . $error->getMessage());
+        echo "<div class='alert alert-danger'>Erro ao retornar os dados.</div>";
+        return;
     }
 
     if (count($result) > 0) {
@@ -65,13 +67,13 @@ $tituloConsulta = 'Estatísticas - Consulta CFO ID única';
         <?php
           foreach ($result as $row) {
             echo "<tr>";
-            echo "<td>" . $row['CRO'] . "</td>";
-            echo "<td>" . $row['CD'] . "</td>";
-            echo "<td>" . $row['TSB'] . "</td>";
-            echo "<td>" . $row['ASB'] . "</td>";
-            echo "<td>" . $row['APD'] . "</td>";
-            echo "<td>" . $row['TPD'] . "</td>";
-            echo "<td>" . $row['TOTAL'] . "</td>";
+            echo "<td>" . htmlspecialchars($row['CRO'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['CD'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['TSB'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['ASB'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['APD'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['TPD'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['TOTAL'] ?? '') . "</td>";
             echo "</tr>";
           }
         ?>

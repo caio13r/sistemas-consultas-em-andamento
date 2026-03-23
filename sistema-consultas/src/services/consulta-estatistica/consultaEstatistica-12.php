@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE12acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE12acesso']) && $row['CE12acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -45,6 +45,10 @@ $tituloConsulta = 'Totalização de Endereços Residenciais mais recentes de Ati
 
 <?php if (isset($inputPost["submit"])) { 
     $croValue = $inputPost["cro"] ?? 'ALL';
+    if ($croValue !== 'ALL' && !array_key_exists($croValue, Helper::$ufList)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+        return;
+    }
     $script = "DECLARE @CRO_UF VARCHAR(2) = '{$croValue}'; ";
 
     $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaEstatistica/consultaEstatistica11.sql";
@@ -64,7 +68,9 @@ $tituloConsulta = 'Totalização de Endereços Residenciais mais recentes de Ati
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -98,9 +104,9 @@ $tituloConsulta = 'Totalização de Endereços Residenciais mais recentes de Ati
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['UF'] . "</td>";
-                    echo "<td>" . $row['Localidade'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['UF']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Localidade']) . "</td>";
                     echo "<td>" . $row['CD'] . "</td>";
                     echo "<td>" . $row['TPD'] . "</td>";
                     echo "<td>" . $row['TSB'] . "</td>";

@@ -83,8 +83,8 @@ try {
     fclose($output);
     
 } catch (Exception $e) {
-    // Em caso de erro, retornar erro 500
+    error_log("download-excel-streaming: " . $e->getMessage());
     http_response_code(500);
-    echo "Erro no download: " . $e->getMessage();
+    echo "Erro no download. Contate o administrador.";
 }
 ?> 

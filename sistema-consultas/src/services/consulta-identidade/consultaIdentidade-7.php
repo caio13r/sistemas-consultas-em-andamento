@@ -6,8 +6,8 @@ Session::CheckSession();
 $tituloConsulta = 'Consulta Identidade por Intervalo';
 
 // Recebe as datas do formulário via POST; se não enviadas, usa valores padrão: primeiro e último dia do mês atual
-$data_inicio = $_POST['data_inicio'] ?? date('Y-m-01');
-$data_fim    = $_POST['data_fim'] ?? date('Y-m-t');
+$data_inicio = $inputPost['data_inicio'] ?? date('Y-m-01');
+$data_fim    = $inputPost['data_fim'] ?? date('Y-m-t');
 
 // Função para converter datas do registro retornado pela API
 function converterData($dataString) {
@@ -31,7 +31,8 @@ try {
     // Recupera o token da API a partir das variáveis de ambiente
     $token = $_ENV['API_TOKEN'] ?? null;
     if (!$token) {
-        die("Token da API não configurado. Verifique seu arquivo .env.");
+        echo "<div class='alert alert-danger'>Token da API não configurado no .env</div>";
+        return;
     }
 
     // Monta a URL da API
@@ -45,14 +46,19 @@ try {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = curl_exec($ch);
     if (curl_errno($ch)) {
-        die("Erro na requisição: " . curl_error($ch));
+        error_log("Consulta Identidade 7 - Erro CURL: " . curl_error($ch));
+        echo "<div class='alert alert-danger'>Erro na requisição à API.</div>";
+        curl_close($ch);
+        return;
     }
     curl_close($ch);
 
     // Decodifica a resposta JSON da API
     $dataApi = json_decode($response, true);
     if (!isset($dataApi['list'])) {
-        die("Erro: resposta inválida ou sem dados da API.");
+        error_log("Consulta Identidade 7 - Resposta inválida da API.");
+        echo "<div class='alert alert-danger'>Resposta inválida ou sem dados da API.</div>";
+        return;
     }
     $identidades = $dataApi['list'];
 
@@ -77,7 +83,9 @@ try {
     // Ordena o array pelas chaves (datas)
     ksort($quantidade_por_dia);
 } catch (Exception $e) {
-    die("Erro: " . $e->getMessage());
+    error_log("Consulta Identidade 7 - Erro: " . $e->getMessage());
+    echo "<div class='alert alert-danger'>Erro ao processar a consulta.</div>";
+    return;
 }
 ?>
 

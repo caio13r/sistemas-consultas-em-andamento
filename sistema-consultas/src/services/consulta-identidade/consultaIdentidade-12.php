@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE7acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE7acesso']) && $row['CE7acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -34,7 +34,9 @@ $tituloConsulta = 'Estatísticas - CFO ID Emitidas';
         $resultMes = $stmt->fetchAll();
 
         } catch (PDOexception $error) {
-            die("Erro ao retornar os dados: " . $error->getMessage());
+            error_log("Erro ao retornar os dados: " . $error->getMessage());
+            echo "<div class='alert alert-danger'>Erro ao retornar os dados.</div>";
+            return;
     }
 ?>
 
@@ -97,22 +99,26 @@ $tituloConsulta = 'Estatísticas - CFO ID Emitidas';
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $params = [];
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
         $croWhere = "WHERE CRO IS NOT NULL";
     } else {
-        $croWhere = "WHERE CRO = '{$inputPost["cro"]}'";
+        $croWhere = "WHERE CRO = :cro";
+        $params[':cro'] = $inputPost["cro"];
     }
 
     if ($inputPost["mes"] === 'ALL' || $inputPost["mes"] === null) {
-        $mesWhere = null;
+        $mesWhere = "";
     } else {
-        $mesWhere = "AND MES = '{$inputPost["mes"]}'";
+        $mesWhere = "AND MES = :mes";
+        $params[':mes'] = $inputPost["mes"];
     }
 
     if ($inputPost["ano"] === 'ALL' || $inputPost["ano"] === null) {
         $anoWhere = "AND ANO IS NOT NULL";
     } else {
-        $anoWhere = "AND ANO = '{$inputPost["ano"]}'";
+        $anoWhere = "AND ANO = :ano";
+        $params[':ano'] = $inputPost["ano"];
     }
 
     try {
@@ -129,12 +135,15 @@ $tituloConsulta = 'Estatísticas - CFO ID Emitidas';
         $croWhere $anoWhere $mesWhere
         GROUP BY CRO, ANO, MES";
         $stmt = $con->prepare($query);
-        // $stmt->bindValue(':cro', "{$inputPost["cro"]}", PDO::PARAM_STR);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        // echo $query . "<br>";
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro ao retornar os dados: " . $error->getMessage());
+        echo "<div class='alert alert-danger'>Erro ao retornar os dados.</div>";
+        return;
     }
 
     $totalCD = array_sum(array_column($result, 'TOTAL_CD'));
@@ -176,9 +185,9 @@ $tituloConsulta = 'Estatísticas - CFO ID Emitidas';
 
             foreach ($result as $row) {
                 echo "<tr>";
-                echo "<td>" . $row['CRO'] . "</td>";
-                echo "<td>" . $row['ANO'] . "</td>";
-                echo "<td>" . $row['MES'] . "</td>";
+                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['ANO']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['MES']) . "</td>";
                 echo "<td>" . number_format($row['TOTAL_CD'], 0, ',', '.') . "</td>";
                 echo "<td>" . number_format($row['TOTAL_TSB'], 0, ',', '.') . "</td>";
                 echo "<td>" . number_format($row['TOTAL_ASB'], 0, ',', '.') . "</td>";

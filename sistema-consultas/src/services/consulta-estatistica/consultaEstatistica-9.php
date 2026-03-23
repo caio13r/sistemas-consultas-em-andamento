@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE7acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE7acesso']) && $row['CE7acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -28,7 +28,9 @@ try {
     $resultCRO = $stmt->fetchAll();
 
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("Erro consulta estatistica: " . $error->getMessage());
+    echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+    $resultCRO = [];
 }
 ?>
 
@@ -60,10 +62,17 @@ try {
 
 <?php if (isset($inputPost["submit"])) { 
 
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croWhere = "WHERE CRO IS NOT NULL";
+    $croCondition = "";
+    $croParam = null;
+    if ($inputPost["cro"] === 'ALL' || empty($inputPost["cro"])) {
+        $croCondition = "CRO IS NOT NULL";
     } else {
-        $croWhere = "WHERE CRO = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croCondition = "CRO = :cro";
+        $croParam = $inputPost["cro"];
     }
 
     try {
@@ -72,14 +81,17 @@ try {
 
         $query = "SELECT CRO, Especialidade, Masculino, Feminino, TOTAL
                   FROM CFO_CWS.dbo.vw_Cons_Registro_Especialidades 
-                  $croWhere
+                  WHERE $croCondition
                   ORDER BY Especialidade";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 
     $totalMasculino = array_sum(array_column($result, 'Masculino'));
@@ -113,8 +125,8 @@ try {
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Especialidade'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Especialidade']) . "</td>";
                     echo "<td>" . $row['Masculino'] . "</td>";
                     echo "<td>" . $row['Feminino'] . "</td>";
                     echo "<td>" . $row['TOTAL'] . "</td>";

@@ -1,4 +1,6 @@
-<?php 
+<?php
+use PDO;
+use PDOException;
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database1;
 use Cfo\SisConsultas\database\Database3;
@@ -6,18 +8,16 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CA18acesso'] == false) {
-    echo "<script language='javascript'>
-    window.alert('Você não tem permissão para acessar essa página.')
+if (Session::get('grupo') != 0 && isset($row['CA18acesso']) && $row['CA18acesso'] == false) {
+    echo "<script>
+    window.alert('Você não tem permissão para acessar essa página.');
     window.location.href='consulta-auditoria';
     </script>";
     exit;
 }
-  
+
 $tituloConsulta = "Auditoria - Profissionais desativados por caducidade ou por cancelamento ex-ofício";
 ?>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <div class="col-md-6 offset-md-3 mb-4">
 <h6 class="mb-2">Desativados por caducidade ou cancelamento ex-ofício</h6>
@@ -28,19 +28,18 @@ $tituloConsulta = "Auditoria - Profissionais desativados por caducidade ou por c
                 <select id="cro" name="cro" class="form-control">
                     <option disabled selected value>Selecione</option>
                     <?php
-                      // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CA18select'] == true) {
-                        foreach(Helper::$ufList as $val => $value) {
+                      if (Session::get('grupo') === 0 || (isset($row['CA18select']) && $row['CA18select'] == true)) {
+                        foreach (Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
-                        }            
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
+                        }
                       } else {
-                        foreach(Helper::$ufList as $val => $value) {
+                        foreach (Helper::$ufList as $val => $value) {
                           if ($users->CheckGroupUf() == $val) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
                           }
-                        }   
+                        }
                       }
                     ?>
                 </select>
@@ -50,31 +49,49 @@ $tituloConsulta = "Auditoria - Profissionais desativados por caducidade ou por c
     </form>
 </div>
 
-<?php 
-    if (isset($inputPost["submit"])) { 
+<?php
+    if (isset($inputPost["submit"])) {
+        $erro = '';
+        $conditions = [];
+        $params = [];
 
-        if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-            $croQuery = "CRO IS NOT NULL";
-        } else {
-            $croQuery = "CRO = '{$inputPost["cro"]}'";
+        if (!empty($inputPost['cro']) && $inputPost['cro'] !== 'ALL') {
+            if (!array_key_exists($inputPost['cro'], Helper::$ufList)) {
+                $erro = "Estado inválido.";
+            } else {
+                $conditions[] = "CRO = :cro";
+                $params[':cro'] = $inputPost['cro'];
+            }
         }
 
-        try {
-            $con = Database3::getInstance()->getConnection();        
-            $query = "SELECT * FROM CFO_CWS.dbo.vw_Cons_Caducados_Com_Registro_Em_Outro_Estado WHERE $croQuery";
-            $stmt = $con->prepare($query);
-            $stmt->execute();
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOexception $error) {
-            die("Erro ao retornar os dados: " . $error->getMessage());
+        $whereClause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
+        $result = [];
+
+        if (empty($erro)) {
+            try {
+                $con = Database3::getInstance()->getConnection();
+                $query = "SELECT * FROM CFO_CWS.dbo.vw_Cons_Caducados_Com_Registro_Em_Outro_Estado $whereClause";
+                $stmt = $con->prepare($query);
+                foreach ($params as $key => $value) {
+                    $stmt->bindValue($key, $value);
+                }
+                $stmt->execute();
+                $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $error) {
+                error_log("Erro em auditoria 18: " . $error->getMessage());
+                echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> Não foi possível realizar a consulta.</div>";
+                $result = [];
+            }
+        } else {
+            echo "<div class='alert alert-warning mt-3'><strong>Atenção!</strong> " . htmlspecialchars($erro) . "</div>";
         }
 ?>
 
 <?php if (!empty($result)) { ?>
     <div class="row justify-content-end mr-1">
         <form action="ExcelDownload" method="post">
-            <input type="hidden" name="tituloConsulta" value="<?= $tituloConsulta ?>">
-            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)); ?>">
+            <input type="hidden" name="tituloConsulta" value="<?= htmlspecialchars($tituloConsulta) ?>">
+            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)) ?>">
             <button type="submit" name="ExcelDownload" class="btn btn-md btn-success">Excel</button>
         </form>
     </div>
@@ -82,7 +99,7 @@ $tituloConsulta = "Auditoria - Profissionais desativados por caducidade ou por c
 
 <div class="row mt-4">
     <div class="col table-responsive">
-        <table id="tabelaConsultas18" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
+        <table id="tabelaAuditoria18" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
             <thead>
             <tr>
                 <th scope="col">CRO</th>
@@ -96,34 +113,31 @@ $tituloConsulta = "Auditoria - Profissionais desativados por caducidade ou por c
             </tr>
             </thead>
             <tbody>
-            <?php
-                foreach ($result as $row) {
-                    echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Categoria'] . "</td>";
-                    echo "<td>" . $row['Inscrição'] . "</td>";
-                    echo "<td>" . $row['Nome'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['Tipo Inscrição'] . "</td>";
-                    echo "<td>" . $row['Situação'] . "</td>";
-                    echo "<td>" . $row['Detalhe'] . "</td>";
-                    echo "</tr>";
-                }
-            ?>
+            <?php foreach ($result as $linha) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($linha['CRO'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Categoria'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Inscrição'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Nome'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['CPF'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Tipo Inscrição'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Situação'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Detalhe'] ?? '') ?></td>
+                </tr>
+            <?php endforeach; ?>
             </tbody>
         </table>
-    </div>  
+    </div>
 </div>
 
-<!-- Inicialização do DataTables com idioma Português -->
 <script>
 $(document).ready(function() {
-    $('#tabelaConsultas18').DataTable({
+    $('#tabelaAuditoria18').DataTable({
         "paging": true,
         "pageLength": 10,
         "lengthMenu": [10, 25, 50, 100],
         "language": {
-            "url": "../assets/lang/pt-BR.json" // Verifique se o caminho para o arquivo de idioma está correto
+            "url": "../assets/lang/pt-BR.json"
         }
     });
 });

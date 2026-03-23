@@ -1,9 +1,9 @@
 <?php
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
+use PDO;
+use PDOException;
 
 Session::CheckSession();
 $users->checkAcess('CL1acesso');
@@ -50,7 +50,7 @@ $con = $db->getConnection();
                 <label for="cro">Selecione o Estado:</label>
                 <select id="cro" name="cro" class="form-control" required>
                   <?php
-                  if (Session::get('grupo') === 0 || $row['CL1select'] == true) {
+                  if (Session::get('grupo') === 0 || (isset($row['CL1select']) && $row['CL1select'] == true)) {
                     foreach (Helper::$ufList as $val => $value) {
                       $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                       echo "<option value='$val' $selected>$value</option>";
@@ -151,12 +151,16 @@ $con = $db->getConnection();
 
         $erro = false;
         $conditions = [];
+        $params = [];
 
         if (!empty($inputPost["cro"])) {
-          if ($inputPost["cro"] == "ALL") {
+          if ($inputPost["cro"] !== "ALL" && !array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            $erro = "CRO inválido.";
+          } elseif ($inputPost["cro"] == "ALL") {
             $conditions[] = "ele.CRO IS NOT NULL";
           } else {
-            $conditions[] = "ele.CRO LIKE '%{$inputPost["cro"]}%'";
+            $conditions[] = "ele.CRO LIKE :cro";
+            $params[':cro'] = '%' . $inputPost["cro"] . '%';
           }
         } else {
           $erro = "O campo do CRO deve ser inserido.";
@@ -171,7 +175,8 @@ $con = $db->getConnection();
               if (strlen($inputPost["nome"]) < 10) {
                 $erro = "O nome deve possuir 10 ou mais caracteres.";
               } else {
-                $conditions[] = "ele.NOME_COMPLETO LIKE '%{$inputPost['nome']}%'";
+                $conditions[] = "ele.NOME_COMPLETO LIKE :nome";
+                $params[':nome'] = '%' . $inputPost['nome'] . '%';
               }
             } else {
               $erro = "O campo nome deve ser preenchido.";
@@ -180,7 +185,8 @@ $con = $db->getConnection();
             
           case '2': // Inscrição
             if (!empty($inputPost["insc"])) {
-              $conditions[] = "ele.INSCRICAO LIKE '%{$inputPost["insc"]}%'";
+              $conditions[] = "ele.INSCRICAO LIKE :insc";
+              $params[':insc'] = '%' . $inputPost["insc"] . '%';
             } else {
               $erro = "O campo inscrição deve ser preenchido.";
             }
@@ -188,7 +194,8 @@ $con = $db->getConnection();
             
           case '3': // CPF
             if (!empty($inputPost["cpf"])) {
-              $conditions[] = "ele.CPF LIKE '%{$inputPost['cpf']}%'";
+              $conditions[] = "ele.CPF LIKE :cpf";
+              $params[':cpf'] = '%' . $inputPost['cpf'] . '%';
             } else {
               $erro = "O campo CPF deve ser preenchido.";
             }
@@ -196,7 +203,8 @@ $con = $db->getConnection();
             
           case '4': // Email
             if (!empty($inputPost["email"])) {
-              $conditions[] = "ele.EMAIL LIKE '%{$inputPost['email']}%'";
+              $conditions[] = "ele.EMAIL LIKE :email";
+              $params[':email'] = '%' . $inputPost['email'] . '%';
             } else {
               $erro = "O campo e-mail deve ser preenchido.";
             }
@@ -204,7 +212,8 @@ $con = $db->getConnection();
             
           case '5': // Celular
             if (!empty($inputPost["celular"])) {
-              $conditions[] = "ele.CELULAR_ATUALIZADO LIKE '%{$inputPost['celular']}%'";
+              $conditions[] = "ele.CELULAR_ATUALIZADO LIKE :celular";
+              $params[':celular'] = '%' . $inputPost['celular'] . '%';
             } else {
               $erro = "O campo celular deve ser preenchido.";
             }
@@ -271,10 +280,15 @@ $con = $db->getConnection();
 
         try {
           $stmt = $con->prepare($queryEleitor);
+          foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+          }
           $stmt->execute();
           $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $error) {
-          die("Erro ao retornar os dados: " . $error->getMessage());
+          error_log("Erro consulta eleicoes-1: " . $error->getMessage());
+          echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+          $result = [];
         }
 
         if (count($result) > 0) {
@@ -303,7 +317,7 @@ $con = $db->getConnection();
                   foreach ($result as $row) {
                     // Definir cor da célula de devedor
                     $devedorClass = '';
-                    $devedorText = $row['DEVEDOR'];
+                    $devedorRaw = htmlspecialchars($row['DEVEDOR'] ?? '', ENT_QUOTES, 'UTF-8');
                     
                     if (strtoupper($row['DEVEDOR']) == 'NÃO') {
                       $devedorClass = '';
@@ -313,20 +327,20 @@ $con = $db->getConnection();
                       $devedorText = '<i class="fas fa-times-circle text-danger"></i> SIM';
                     } else {
                       $devedorClass = 'table-warning';
-                      $devedorText = '<i class="fas fa-question-circle text-warning"></i> ' . $row['DEVEDOR'];
+                      $devedorText = '<i class="fas fa-question-circle text-warning"></i> ' . $devedorRaw;
                     }
                     
                     echo "<tr>";
-                    echo "<td>" . $row['NOME_COMPLETO'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['CATEGORIA'] . "</td>";
-                    echo "<td>" . $row['INSCRICAO'] . "</td>";
-                    echo "<td>" . $row['SITUACAO'] . "</td>";
-                    echo "<td>" . $row['DETALHE_SITUACAO'] . "</td>";
-                    echo "<td>" . $row['VOTANTE'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['NOME_COMPLETO'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CPF'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CATEGORIA'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['INSCRICAO'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['SITUACAO'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['DETALHE_SITUACAO'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
+                    echo "<td>" . htmlspecialchars($row['VOTANTE'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
                     echo "<td class='$devedorClass'>" . $devedorText . "</td>";
-                    echo "<td>" . $row['TIPO_INSCRICAO'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['TIPO_INSCRICAO'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
                     echo "<td><button type='button' class='btn btn-secondary btn-sm' onclick='verDetalhes(\""
                       . htmlspecialchars($row['CPF'], ENT_QUOTES) . "\",\""
                       . htmlspecialchars($row['CRO'], ENT_QUOTES) . "\",\""
@@ -453,7 +467,3 @@ $(document).ready(function() {
     });
 });
 </script>
-
-<?php
-require_once INC_PATH . '/footer.php';
-?>

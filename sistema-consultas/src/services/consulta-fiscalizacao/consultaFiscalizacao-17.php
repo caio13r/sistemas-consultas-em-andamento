@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF7acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row) && isset($row['CF7acesso']) && $row['CF7acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -26,7 +26,7 @@ $tituloConsulta = 'Estatísticas de Coordenadores de Fiscalização';
                     <option disabled selected value>Selecione</option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CF6select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row) && isset($row['CF6select']) && $row['CF6select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -49,28 +49,45 @@ $tituloConsulta = 'Estatísticas de Coordenadores de Fiscalização';
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $erro = '';
+    $params = [];
+
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croWhere = " and uf IS NOT NULL";
+        $croWhere = " AND uf IS NOT NULL";
     } else {
-        $croWhere = " and uf = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            $erro = "Estado inválido.";
+        } else {
+            $croWhere = " AND uf = :cro";
+            $params[':cro'] = $inputPost["cro"];
+        }
     }
 
-    try {
-        $db = Database1::getInstance();
-        $con = $db->getConnection();
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        try {
+            $db = Database1::getInstance();
+            $con = $db->getConnection();
 
-        $query = "SELECT  tb_g.uf, tb_u.name, tb_u.email, tb_u.telefoneCtt, tb_u.telefoneWpp  from db_sistema_consultas.tbl_users tb_u
-                    inner join db_sistema_consultas.tbl_subgrupos tb_s  on tb_u.subgrupo = tb_s.id
-                    inner join db_sistema_consultas.tbl_grupos tb_g on tb_u.grupo = tb_g.id 
-                    where tb_s.subgrupo = 'Fiscalização - Coordenação'
-                    AND tb_u.isActive = 1";
+            $query = "SELECT  tb_g.uf, tb_u.name, tb_u.email, tb_u.telefoneCtt, tb_u.telefoneWpp  from db_sistema_consultas.tbl_users tb_u
+                        inner join db_sistema_consultas.tbl_subgrupos tb_s  on tb_u.subgrupo = tb_s.id
+                        inner join db_sistema_consultas.tbl_grupos tb_g on tb_u.grupo = tb_g.id 
+                        where tb_s.subgrupo = 'Fiscalização - Coordenação'
+                        AND tb_u.isActive = 1";
 
-        $stmt = $con->prepare($query.$croWhere);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOexception $error) {
-        // echo $query . "<br>";
-        die("Erro ao retornar os dados: " . $error->getMessage());
+            $stmt = $con->prepare($query . $croWhere);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $error) {
+            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+            $result = [];
+        }
     }
 ?>
 
@@ -100,11 +117,11 @@ $tituloConsulta = 'Estatísticas de Coordenadores de Fiscalização';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['uf'] . "</td>";
-                    echo "<td>" . $row['name'] . "</td>";
-                    echo "<td>" . $row['email'] . "</td>";
-                    echo "<td>" . Helper::formatarTelefone($row['telefoneCtt']) . "</td>";
-                    echo "<td>" . Helper::formatarTelefone($row['telefoneWpp']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['uf']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['name']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['email']) . "</td>";
+                    echo "<td>" . htmlspecialchars(Helper::formatarTelefone($row['telefoneCtt'])) . "</td>";
+                    echo "<td>" . htmlspecialchars(Helper::formatarTelefone($row['telefoneWpp'])) . "</td>";
                     echo "</tr>";
                 }
             ?>

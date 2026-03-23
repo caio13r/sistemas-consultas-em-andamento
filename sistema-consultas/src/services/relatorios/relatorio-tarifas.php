@@ -39,11 +39,11 @@ $current_date = date('Y-m', strtotime('-1 month'));
                             <?php
                             if (Session::get('grupo') === 0 || $row['RE2select']) {
                                 foreach (Helper::$ufList as $val => $value) {
-                                    echo "<option value='$val'>$value</option>";
+                                    echo "<option value='" . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . "'>" . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . "</option>";
                                 }
                             } else {
                                 if ($val = $users->CheckGroupUf()) {
-                                    echo "<option value='$val'>$value</option>";
+                                    echo "<option value='" . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . "'>" . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . "</option>";
                                 }
                             }
                             ?>

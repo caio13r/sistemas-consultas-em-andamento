@@ -1,12 +1,17 @@
 <?php
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
+use PDO;
 
 // Configurar cabeçalho para AJAX
 header('Content-Type: text/html; charset=utf-8');
 
 // Verificar se é uma requisição AJAX válida
-if (!isset($_POST['cpf']) || empty($_POST['cpf']) || !isset($_POST['cro']) || empty($_POST['cro']) || !isset($_POST['inscricao']) || empty($_POST['inscricao'])) {
+$cpfInput = isset($_POST['cpf']) ? trim($_POST['cpf']) : '';
+$croInput = isset($_POST['cro']) ? trim($_POST['cro']) : '';
+$inscricaoInput = isset($_POST['inscricao']) ? trim($_POST['inscricao']) : '';
+
+if (empty($cpfInput) || empty($croInput) || empty($inscricaoInput)) {
     echo '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle mr-2"></i>Dados insuficientes para consulta (CPF, CRO e Inscrição obrigatórios).</div>';
     exit;
 }
@@ -23,9 +28,9 @@ try {
     
     $db = Database3::getInstance();
     $con = $db->getConnection();
-    $cpf = $_POST['cpf'];
-    $cro = $_POST['cro'];
-    $inscricao = $_POST['inscricao'];
+    $cpf = $cpfInput;
+    $cro = $croInput;
+    $inscricao = $inscricaoInput;
     
     // Verificar se a pessoa está na lista de eleitores que tiveram status alterado
     $db3 = \Cfo\SisConsultas\database\Database3::getInstance();

@@ -24,12 +24,13 @@ console_log(">>> INÍCIO DO SCRIPT relatorio-processos-especialidade-gerar.php -
 Session::init(); // Inicializa a sessão, se necessário
 Session::CheckSession(); // Verifica a sessão, se necessário
 
+$inputPost = $_POST;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     console_log(">>> MÉTODO POST DETECTADO");
-    console_log(">>> POST DATA: " . print_r($_POST, true)); // Útil para ver o que está sendo enviado
+    console_log(">>> POST DATA: " . print_r($inputPost, true));
 
-    // Validação dos parâmetros necessários
-    if (!isset($_POST['data_inicial']) || !isset($_POST['data_final'])) {
+    if (!isset($inputPost['data_inicial']) || !isset($inputPost['data_final'])) {
         console_log(">>> ERRO: Datas não fornecidas para geração do Excel.");
         echo "<script>
                   alert('É necessário preencher todas as datas para gerar o relatório.');
@@ -38,10 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $date_start = $_POST['data_inicial'];
-    $date_end = $_POST['data_final'];
-    $estado = $_POST['estado'] ?? 'TODOS'; // Pega o estado do POST
-    $etapa = $_POST['etapa'] ?? 'TODOS';   // Pega a etapa do POST
+    $date_start = $inputPost['data_inicial'];
+    $date_end = $inputPost['data_final'];
+    $estado = $inputPost['estado'] ?? 'TODOS';
+    $etapa = $inputPost['etapa'] ?? 'TODOS';
 
     $date_title = date('d/m/Y', strtotime($date_start)) . ' a ' . date('d/m/Y', strtotime($date_end));
 

@@ -1,8 +1,7 @@
-            <footer class="sticky-footer bg-white mt-3">
+            <footer class="sticky-footer bg-white">
                 <div class="container my-auto">
                     <div class="copyright text-center my-auto">
-                        <span>Conselho Federal de Odontologia <?= date('Y'); ?><br>
-                        Sistema Consultas CFO v1.2</span>
+                        <span>&copy; <?= date('Y'); ?> Conselho Federal de Odontologia &middot; Sistema Consultas v1.2</span>
                     </div>
                 </div>
             </footer>
@@ -27,8 +26,8 @@
                 </div>
                 <div class="modal-body">Clique no botão "Logout" para encerrar sua sessão.</div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                    <a class="btn btn-primary" href="?action=logout">Logout</a>
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancelar</button>
+                    <a class="btn btn-primary" href="?action=logout">Sair</a>
                 </div>
             </div>
         </div>

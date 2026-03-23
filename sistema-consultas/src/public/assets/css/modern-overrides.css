@@ -1,0 +1,517 @@
+/* ============================================
+   MODERN OVERRIDES  –  CFO Sistema Consultas
+   Carregado APÓS styles.css para refinamento visual.
+   ============================================ */
+
+/* ---------- Design Tokens ---------- */
+:root {
+  --cfo-primary: #6f1e26;
+  --cfo-primary-light: #85414a;
+  --cfo-primary-dark: #52141a;
+  --cfo-primary-subtle: rgba(111, 30, 38, 0.07);
+  --cfo-accent: #7b2c34;
+  --cfo-bg: #f5f6f8;
+  --cfo-surface: #ffffff;
+  --cfo-text: #161c26;
+  --cfo-text-muted: #5f6977;
+  --cfo-border: #d5dbe3;
+  --cfo-radius: 8px;
+  --cfo-radius-lg: 12px;
+  --cfo-shadow-sm: 0 1px 3px rgba(18, 24, 33, 0.05), 0 1px 2px rgba(18, 24, 33, 0.03);
+  --cfo-shadow: 0 8px 24px rgba(18, 24, 33, 0.08);
+  --cfo-shadow-lg: 0 18px 40px rgba(18, 24, 33, 0.12);
+  --cfo-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- Typography ---------- */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--cfo-text);
+  background: var(--cfo-bg);
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar.bg-gradient-primary {
+  background: linear-gradient(180deg, #6f1e26 0%, #5f1a21 55%, #4a1218 100%) !important;
+}
+
+.sidebar .nav-item .nav-link {
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 0.65rem 1rem;
+}
+
+.sidebar .nav-item .nav-link i {
+  min-width: 20px;
+  text-align: center;
+}
+
+.sidebar .sidebar-brand img {
+  max-width: 70%;
+  height: auto;
+}
+
+.sidebar .sidebar-heading {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+/* ---------- Topbar ---------- */
+.topbar .h5 {
+  font-size: 0.95rem !important;
+  letter-spacing: 0.01em;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  border: 1px solid var(--cfo-border);
+  border-radius: var(--cfo-radius);
+  box-shadow: var(--cfo-shadow-sm);
+}
+
+.card-header {
+  background: var(--cfo-surface);
+  border-bottom: 1px solid var(--cfo-border);
+  font-weight: 600;
+}
+
+/* ---------- Forms ---------- */
+.form-control {
+  border-radius: 6px;
+  border-color: var(--cfo-border);
+  font-size: 0.88rem;
+  padding: 0.5rem 0.75rem;
+  transition: var(--cfo-transition);
+}
+
+.form-control:focus {
+  border-color: var(--cfo-primary-light);
+  box-shadow: 0 0 0 3px rgba(111, 30, 38, 0.1);
+}
+
+/* ---------- Tables ---------- */
+.table thead th {
+  background: #f7f8fa;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cfo-text-muted);
+  border-bottom: 2px solid var(--cfo-border);
+  padding: 0.65rem 0.75rem;
+}
+
+.table td {
+  font-size: 0.86rem;
+  vertical-align: middle;
+  padding: 0.6rem 0.75rem;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #fafbfc;
+}
+
+/* ---------- Buttons ---------- */
+.btn-primary {
+  background-color: var(--cfo-primary);
+  border-color: var(--cfo-primary);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--cfo-primary-dark);
+  border-color: var(--cfo-primary-dark);
+  box-shadow: 0 4px 12px rgba(111, 30, 38, 0.2);
+}
+
+.btn {
+  font-size: 0.86rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  transition: var(--cfo-transition);
+}
+
+/* ---------- Alerts ---------- */
+.alert {
+  border-radius: var(--cfo-radius);
+  font-size: 0.88rem;
+}
+
+/* ============================================
+   HOME  –  Welcome Banner + Cards
+   ============================================ */
+.welcome-banner {
+  background: linear-gradient(135deg, #792129 0%, #661a21 55%, #4f1218 100%);
+  border-radius: var(--cfo-radius-lg);
+  padding: 1.5rem 1.75rem;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 28px rgba(79, 18, 24, 0.16);
+}
+
+.welcome-banner h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.welcome-banner p {
+  opacity: 0.75;
+  font-size: 0.88rem;
+  margin-bottom: 0;
+}
+
+.card.home-card {
+  border: 1px solid var(--cfo-border);
+  border-radius: var(--cfo-radius);
+  transition: var(--cfo-transition);
+  color: var(--cfo-text);
+}
+
+.card.home-card:hover {
+  border-color: rgba(111, 30, 38, 0.18);
+  box-shadow: 0 6px 20px rgba(18, 24, 33, 0.08);
+  transform: translateY(-2px);
+}
+
+.card.home-card .card-body {
+  padding: 1.1rem 1.25rem;
+}
+
+.home-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cfo-primary-subtle);
+  color: var(--cfo-primary);
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.home-card-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--cfo-text);
+  margin-bottom: 0.15rem;
+}
+
+.home-card-desc {
+  font-size: 0.78rem;
+  color: var(--cfo-text-muted);
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
+/* ============================================
+   LOGIN
+   ============================================ */
+.bg-login {
+  background: linear-gradient(135deg, #6f1e26 0%, #52141a 100%) !important;
+}
+
+.bg-login img {
+  max-width: 200px;
+}
+
+/* ============================================
+   FOOTER  –  Ficar no fundo da página
+   ============================================ */
+#content-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#content-wrapper > #content {
+  flex: 1;
+}
+
+.sticky-footer {
+  margin-top: auto !important;
+  padding: 0.75rem 0;
+  border-top: 1px solid #e3e6ec;
+}
+
+.sticky-footer .copyright span {
+  font-size: 0.76rem;
+  color: #8a92a0;
+  letter-spacing: 0.01em;
+}
+
+/* ============================================
+   CONSULTA INTEGRADA
+   ============================================ */
+.consulta-integrada-shell {
+  border: none !important;
+  box-shadow: var(--cfo-shadow) !important;
+  overflow: hidden;
+}
+
+.consulta-integrada-header {
+  padding: 1.25rem 1.5rem !important;
+  background: linear-gradient(135deg, #6f1e26 0%, #52141a 100%) !important;
+  border-bottom: none !important;
+}
+
+.consulta-integrada-header h4 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #fff !important;
+}
+
+.consulta-integrada-subtitle {
+  color: rgba(255,255,255,0.6) !important;
+  font-size: 0.82rem;
+  margin-top: 0.2rem;
+}
+
+.consulta-integrada-body {
+  padding: 1.35rem 1.5rem 1.5rem !important;
+  background: #fafbfc;
+}
+
+.consulta-integrada-switcher {
+  margin-bottom: 1.25rem;
+}
+
+.consulta-integrada-switcher-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cfo-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.consulta-integrada-switcher-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.consulta-integrada-switcher-item {
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--cfo-border);
+  background: #fff;
+  color: var(--cfo-text);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: var(--cfo-transition);
+}
+
+.consulta-integrada-switcher-item:hover {
+  border-color: rgba(111, 30, 38, 0.2);
+  color: var(--cfo-primary);
+}
+
+.consulta-integrada-switcher-item.is-active {
+  background: var(--cfo-primary);
+  border-color: var(--cfo-primary);
+  color: #fff;
+}
+
+.consulta-integrada-section {
+  background: #fff;
+  border: 1px solid var(--cfo-border);
+  border-radius: var(--cfo-radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.consulta-integrada-section-head {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--cfo-text);
+  margin-bottom: 0.75rem;
+}
+
+.consulta-integrada-helper {
+  font-size: 0.82rem;
+  color: var(--cfo-text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.consulta-integrada-form-wrap {
+  max-width: 100%;
+}
+
+.consulta-integrada-form-wrap-narrow {
+  max-width: 600px;
+}
+
+.consulta-integrada-actions {
+  margin-top: 1rem;
+}
+
+.consulta-integrada-results .table-responsive {
+  border-radius: var(--cfo-radius);
+  overflow: hidden;
+}
+
+/* ============================================
+   CONSULTA AUDITORIA
+   ============================================ */
+.consulta-auditoria-shell {
+  overflow: hidden;
+  border: none !important;
+  box-shadow: var(--cfo-shadow) !important;
+}
+
+.consulta-auditoria-header {
+  padding: 1.25rem 1.5rem !important;
+  background: linear-gradient(135deg, #6f1e26 0%, #52141a 100%) !important;
+  border-bottom: none !important;
+  position: relative;
+}
+
+.consulta-auditoria-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 1.5rem;
+  right: 1.5rem;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+}
+
+.consulta-auditoria-header h4 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #fff !important;
+  letter-spacing: 0.01em;
+}
+
+.consulta-auditoria-subtitle {
+  color: rgba(255,255,255,0.6) !important;
+  font-size: 0.82rem;
+  margin-top: 0.2rem;
+}
+
+.consulta-auditoria-body {
+  padding: 1.35rem 1.5rem 1.5rem !important;
+  background: #fafbfc;
+}
+
+.consulta-auditoria-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.consulta-auditoria-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--cfo-radius);
+  border: 1px solid var(--cfo-border);
+  background: #fff;
+  color: var(--cfo-text);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: var(--cfo-transition);
+  line-height: 1.35;
+}
+
+.consulta-auditoria-menu-item:hover {
+  border-color: rgba(111, 30, 38, 0.18);
+  background: #fff;
+  color: var(--cfo-primary);
+  box-shadow: 0 3px 10px rgba(18, 24, 33, 0.06);
+}
+
+.consulta-auditoria-menu-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--cfo-primary-subtle);
+  color: var(--cfo-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: var(--cfo-transition);
+}
+
+.consulta-auditoria-menu-item:hover .consulta-auditoria-menu-num {
+  background: var(--cfo-primary);
+  color: #fff;
+}
+
+.consulta-auditoria-menu-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.consulta-auditoria-content {
+  background: #fff;
+  border: 1px solid var(--cfo-border);
+  border-radius: var(--cfo-radius);
+  padding: 1.25rem;
+}
+
+.consulta-auditoria-content .col-md-6.offset-md-3 {
+  max-width: 100%;
+  flex: 0 0 100%;
+  margin-left: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.consulta-auditoria-content label {
+  font-weight: 600;
+  color: var(--cfo-text);
+}
+
+.consulta-auditoria-content .btn-primary {
+  min-width: 140px;
+}
+
+.consulta-auditoria-content .table {
+  border-radius: var(--cfo-radius);
+  overflow: hidden;
+}
+
+.consulta-auditoria-content .alert {
+  margin-top: 1rem;
+}
+
+.consulta-auditoria-header-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+  font-size: 0.82rem;
+  text-decoration: none !important;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.consulta-auditoria-header-back:hover {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+@media (min-width: 992px) {
+  .consulta-auditoria-menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+  .consulta-auditoria-menu-grid {
+    grid-template-columns: 1fr;
+  }
+}

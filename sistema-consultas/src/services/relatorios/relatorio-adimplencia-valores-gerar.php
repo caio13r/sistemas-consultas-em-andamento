@@ -11,15 +11,16 @@ Session::init();
 Session::CheckSession();
 $users = new Users();
 
-// Variáveis post
-$origem = $_POST['origem'] ?? null;
-$data = $_POST['date_filter'] ?? null;
-$categoria = $_POST['categoria_filter'] ?? null;
+$inputPost = $_POST;
+
+$origem = $inputPost['origem'] ?? null;
+$data = preg_replace('/[^0-9]/', '', $inputPost['date_filter'] ?? '');
+$categoria = $inputPost['categoria_filter'] ?? null;
 
 if ($categoria == 'ALL' || $categoria == null) {
     $categoria = 'Todos';
 } else {
-    $categoria = $_POST['categoria_filter'];
+    $categoria = $inputPost['categoria_filter'];
 }
 
 // Validação post
@@ -76,14 +77,17 @@ try {
     $stmt->bindValue(':origem', $origem, PDO::PARAM_STR);
     $stmt->execute();
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("relatorio-adimplencia-valores-gerar: Erro ao retornar os dados: " . $error->getMessage());
+    echo '<div class="alert alert-danger">Erro ao processar. Tente novamente.</div>';
 }
 
-// Prepara o download do arquivo xlsx
 $file = $categoria == 'Todos' ? "Relatório de Adimplência (Valores) " . $data . ".xlsx" : "Relatório de Adimplência (Valores) " . $categoria ." ". $data . ".xlsx";
 $downloadPath = realpath(dirname(__FILE__, 1)) . "/relatorios/rel.xlsx";
-if (!file_exists($downloadPath))
-   die('Arquivo não existe!');
+if (!file_exists($downloadPath)) {
+   error_log("relatorio-adimplencia-valores-gerar: Arquivo não existe: " . $downloadPath);
+   echo '<div class="alert alert-danger">Erro ao processar. Tente novamente.</div>';
+   exit;
+}
 header('Content-disposition: attachment; filename=' . $file . ';'); 
 header('Content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Length: '.filesize($downloadPath));
@@ -92,4 +96,4 @@ header('Cache-Control: must-revalidate');
 header('Pragma: public');
 
 readfile($downloadPath);
-die();
+exit;

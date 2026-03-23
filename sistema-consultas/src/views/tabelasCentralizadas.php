@@ -75,10 +75,10 @@ $labelsTCSISDOC = [
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -100,17 +100,17 @@ $labelsTCSISDOC = [
                         <?php foreach($labels as $label) { ?>
                                 <?php if ($label['grupo'] == 1 && $label['disabled'] != 1){?>
                                     <?php if (Session::get('grupo') === 0 || $row['TC'.$label['referencial'].'acesso'] == true) { ?>
-                                        <a href="/tabelas-centralizadas?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                        <a href="/tabelas-centralizadas?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
                                                 class="btn btn-<?= ($inputGet['tipoConsulta'] === (string)$label['referencial']) ? 'primary active' : 'secondary' ?> btn-md"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php } ?>
@@ -140,8 +140,8 @@ $labelsTCSISDOC = [
                     13 => 'tabelas-centralizadas-13.php', #nova view
                 ];
 
-                $tipoConsulta = $_GET['tipoConsulta'] ?? null;
-                $codigo = $_GET['codigo'] ?? null;
+                $tipoConsulta = $inputGet['tipoConsulta'] ?? null;
+                $codigo = $inputGet['codigo'] ?? null;
                 if ($tipoConsulta && isset($fileMap[$tipoConsulta])) {
                     require SERVICES_PATH . '/tabelas-centralizadas/' . $fileMap[$tipoConsulta];
                 }else if ($codigo) {

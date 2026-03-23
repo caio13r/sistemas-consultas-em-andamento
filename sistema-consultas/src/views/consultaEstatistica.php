@@ -44,18 +44,18 @@ Session::CheckSession();
                         <div class="col-md-6"> <!-- Alterado para 6 colunas para duas colunas -->
                             <?php foreach ($chunk as $label): ?>
                                 <?php if ($label['disabled'] == 0): ?>
-                                    <?php if (Session::get('grupo') === 0 || $row['CE' . $label['referencial'] . 'acesso'] == true): ?>
-                                        <a href="/consulta-estatistica?tipoConsulta=<?= $label['referencial'] ?>" class="btn-container">
+                                    <?php if (Session::get('grupo') === 0 || (isset($row['CE' . $label['referencial'] . 'acesso']) && $row['CE' . $label['referencial'] . 'acesso'] == true)): ?>
+                                        <a href="/consulta-estatistica?tipoConsulta=<?= htmlspecialchars($label['referencial']) ?>" class="btn-container">
                                             <button 
                                                 type="button" 
-                                                class="btn btn-<?= ($inputGet['tipoConsulta'] === (string)$label['referencial']) ? 'primary active' : 'secondary' ?> btn-md btn-edit"
+                                                class="btn btn-<?= (($inputGet['tipoConsulta'] ?? '') === (string)$label['referencial']) ? 'primary active' : 'secondary' ?> btn-md btn-edit"
                                                 data-bs-toggle="popover"
                                                 data-bs-html="true"
                                                 data-bs-placement="bottom"
-                                                data-bs-content='<?= $label['descricao'] ?>'
+                                                data-bs-content='<?= htmlspecialchars($label['descricao']) ?>'
                                                 data-bs-trigger="hover"
                                             >
-                                                <?= $label['nome'] ?>
+                                                <?= htmlspecialchars($label['nome']) ?>
                                             </button>
                                         </a>
                                     <?php endif; ?>
@@ -66,23 +66,15 @@ Session::CheckSession();
             </div>
 
             <?php
-                if(isset($inputGet['tipoConsulta'])) {
-                    require SERVICES_PATH . '/consulta-estatistica/consultaEstatistica-' . $inputGet['tipoConsulta'] . '.php';
+                $tipoConsulta = intval($inputGet['tipoConsulta'] ?? 0);
+                $servicePath = SERVICES_PATH . '/consulta-estatistica/consultaEstatistica-' . $tipoConsulta . '.php';
+                if ($tipoConsulta >= 1 && $tipoConsulta <= 20 && file_exists($servicePath)) {
+                    require $servicePath;
                 }
             ?>
         </div>
     </div>  
 </div>
-
-<style>
-.btn-container {
-    display: block;
-    width: 100%;
-    margin-bottom: 10px;
-}
-
-
-</style>
 
 <?php 
 require_once INC_PATH . '/footer.php';

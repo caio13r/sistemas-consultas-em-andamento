@@ -1,11 +1,13 @@
-<?php 
+<?php
+use PDO;
+use PDOException;
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CA11acesso'] == false) {
+if (Session::get('grupo') != 0 && (!isset($row['CA11acesso']) || $row['CA11acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -14,10 +16,8 @@ if (Session::get('grupo') != 0 && $row['CA11acesso'] == false) {
 }
 
 $tituloConsulta = 'Auditoria - Profissionais sem data de colação';
+$erro = '';
 ?>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- PROFISSIONAIS SEM DATA DE COLAÇÃO -->
 
 <div class="col-md-6 offset-md-3 mb-4">
 <h6 class="mb-2">Consultar profissionais CDS sem a respectiva data de colação de grau</h6>
@@ -28,19 +28,18 @@ $tituloConsulta = 'Auditoria - Profissionais sem data de colação';
                 <select id="cro" name="cro" class="form-control">
                     <option disabled selected value>Selecione</option>
                     <?php
-                      // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CA11select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CA11select']) && $row['CA11select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
-                            $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
-                        }            
+                            $selected = (($inputPost['cro'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
+                        }
                       } else {
                         foreach(Helper::$ufList as $val => $value) {
                           if ($users->CheckGroupUf() == $val) {
-                            $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
+                            $selected = (($inputPost['cro'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
                           }
-                        }   
+                        }
                       }
                     ?>
                 </select>
@@ -50,47 +49,64 @@ $tituloConsulta = 'Auditoria - Profissionais sem data de colação';
     </form>
 </div>
 
-<?php if (isset($inputPost["submit"])) { 
+<?php if (isset($inputPost["submit"])) {
 
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croQuery = 'CRO IS NOT NULL';
-    } else {
-        $croQuery = "CRO = '{$inputPost["cro"]}'";
+    $conditions = [];
+    $params = [];
+
+    if (!empty($inputPost['cro']) && $inputPost['cro'] !== 'ALL') {
+        if (!array_key_exists($inputPost['cro'], Helper::$ufList)) {
+            $erro = "Estado inválido.";
+        } else {
+            $conditions[] = "CRO = :cro";
+            $params[':cro'] = $inputPost['cro'];
+        }
     }
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-    
-        $query = "SELECT 
-            CRO,
-            Categoria,
-             Inscrição,
-            [Nome/Razão social] AS Nome,
-            [CPF/CNPJ] AS CPF,
-            [Tipo de inscrição] ,
-            Situação,
-            Detalhe,
-            [Data de inscrição] ,
-            [Data de colação] ,
-            [Situação registro atual]
-        FROM CFO_CWS.dbo.vw_Cons_Profissionais_Sem_Data_Colacao
-        WHERE $croQuery
-        ORDER BY [Situação registro atual] ASC";
-        $stmt = $con->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOexception $error) {
-        // echo $query;
-        die("Erro ao retornar os dados: " . $error->getMessage());
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $whereClause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
+
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+
+            $query = "SELECT
+                CRO,
+                Categoria,
+                Inscrição,
+                [Nome/Razão social] AS Nome,
+                [CPF/CNPJ] AS CPF,
+                [Tipo de inscrição],
+                Situação,
+                Detalhe,
+                [Data de inscrição],
+                [Data de colação],
+                [Situação registro atual]
+            FROM CFO_CWS.dbo.vw_Cons_Profissionais_Sem_Data_Colacao"
+            . $whereClause .
+            " ORDER BY [Situação registro atual] ASC";
+            $stmt = $con->prepare($query);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value, PDO::PARAM_STR);
+            }
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $error) {
+            error_log("Erro em auditoria 11: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> Não foi possível realizar a consulta.</div>";
+            $result = [];
+        }
     }
 ?>
 
 <?php if (!empty($result)) { ?>
     <div class="row justify-content-end mr-1">
         <form action="ExcelDownload" method="post">
-            <input type="hidden" name="tituloConsulta" value="<?= $tituloConsulta ?>">
-            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)); ?>">
+            <input type="hidden" name="tituloConsulta" value="<?= htmlspecialchars($tituloConsulta) ?>">
+            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)) ?>">
             <button type="submit" name="ExcelDownload" class="btn btn-md btn-success">Excel</button>
         </form>
     </div>
@@ -98,8 +114,7 @@ $tituloConsulta = 'Auditoria - Profissionais sem data de colação';
 
 <div class="row mt-4">
     <div class="col table-responsive">
-  
-        <table id="tabelaConsultas11" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
+        <table id="tabelaAuditoria11" class="table table-sm table-bordered table-striped table-hover mt-4 mb-4">
             <thead>
             <tr>
                 <th scope="col">CRO</th>
@@ -115,42 +130,38 @@ $tituloConsulta = 'Auditoria - Profissionais sem data de colação';
                 <th scope="col">Situação Registro Atual</th>
             </tr>
             </thead>
-            <tbody id="tabelaBody">
-            <?php
-                foreach ($result as $row) {
-                    echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Categoria'] . "</td>";
-                    echo "<td>" . $row['Inscrição'] . "</td>";
-                    echo "<td>" . $row['Nome'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['Tipo de inscrição'] . "</td>";
-                    echo "<td>" . $row['Situação'] . "</td>";
-                    echo "<td>" . $row['Detalhe'] . "</td>";
-                    echo "<td>" . $row['Data de inscrição'] . "</td>";
-                    echo "<td>" . $row['Data de colação'] . "</td>";
-                    echo "<td>" . $row['Situação registro atual'] . "</td>";
-                    echo "</tr>";
-                }
-            ?>
+            <tbody>
+            <?php foreach ($result as $linha) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($linha['CRO'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Categoria'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Inscrição'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Nome'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['CPF'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Tipo de inscrição'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Situação'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Detalhe'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Data de inscrição'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Data de colação'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Situação registro atual'] ?? '') ?></td>
+                </tr>
+            <?php endforeach; ?>
             </tbody>
         </table>
-    </div>  
+    </div>
 </div>
 
-<!-- Inicialização do DataTables com idioma Português -->
 <script>
 $(document).ready(function() {
-    $('#tabelaConsultas11').DataTable({
+    $('#tabelaAuditoria11').DataTable({
         "paging": true,
         "pageLength": 10,
         "lengthMenu": [10, 25, 50, 100],
         "language": {
-            "url": "../assets/lang/pt-BR.json" // Caminho local para o arquivo de tradução
+            "url": "../assets/lang/pt-BR.json"
         }
     });
 });
 </script>
-
 
 <?php } ?>

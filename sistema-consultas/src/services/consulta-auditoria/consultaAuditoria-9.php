@@ -1,11 +1,13 @@
-<?php 
+<?php
+use PDO;
+use PDOException;
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CA9acesso'] == false) {
+if (Session::get('grupo') != 0 && (!isset($row['CA9acesso']) || $row['CA9acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -14,6 +16,7 @@ if (Session::get('grupo') != 0 && $row['CA9acesso'] == false) {
 }
 
 $tituloConsulta = 'Auditoria - Responsável técnico cadastrado em mais de uma empresa ativa';
+$erro = '';
 ?>
 
 <div class="col-md-6 offset-md-3 mb-4">
@@ -25,19 +28,18 @@ $tituloConsulta = 'Auditoria - Responsável técnico cadastrado em mais de uma e
                 <select id="cro" name="cro" class="form-control">
                     <option disabled selected value>Selecione</option>
                     <?php
-                      // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CA9select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CA9select']) && $row['CA9select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
-                            $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
-                        }            
+                            $selected = (($inputPost['cro'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
+                        }
                       } else {
                         foreach(Helper::$ufList as $val => $value) {
                           if ($users->CheckGroupUf() == $val) {
-                            $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
+                            $selected = (($inputPost['cro'] ?? '') == $val) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($val) . "' $selected>" . htmlspecialchars($value) . "</option>";
                           }
-                        }   
+                        }
                       }
                     ?>
                 </select>
@@ -47,33 +49,50 @@ $tituloConsulta = 'Auditoria - Responsável técnico cadastrado em mais de uma e
     </form>
 </div>
 
-<?php if (isset($inputPost["submit"])) { 
+<?php if (isset($inputPost["submit"])) {
 
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croQuery = 'CRO IS NOT NULL';
-    } else {
-        $croQuery = "CRO = '{$inputPost["cro"]}'";
+    $conditions = [];
+    $params = [];
+
+    if (!empty($inputPost['cro']) && $inputPost['cro'] !== 'ALL') {
+        if (!array_key_exists($inputPost['cro'], Helper::$ufList)) {
+            $erro = "Estado inválido.";
+        } else {
+            $conditions[] = "CRO = :cro";
+            $params[':cro'] = $inputPost['cro'];
+        }
     }
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-    
-        $query = "SELECT * FROM CFO_CWS.dbo.vw_Cons_RT_Em_Mais_De_Uma_Empresa WHERE $croQuery";
-        $stmt = $con->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOexception $error) {
-        // echo $query;
-        die("Erro ao retornar os dados: " . $error->getMessage());
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $whereClause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
+
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+
+            $query = "SELECT * FROM CFO_CWS.dbo.vw_Cons_RT_Em_Mais_De_Uma_Empresa" . $whereClause;
+            $stmt = $con->prepare($query);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value, PDO::PARAM_STR);
+            }
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $error) {
+            error_log("Erro em auditoria 9: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><strong>Erro!</strong> Não foi possível realizar a consulta.</div>";
+            $result = [];
+        }
     }
 ?>
 
 <?php if (!empty($result)) { ?>
     <div class="row justify-content-end mr-1">
         <form action="ExcelDownload" method="post">
-            <input type="hidden" name="tituloConsulta" value="<?= $tituloConsulta ?>">
-            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)); ?>">
+            <input type="hidden" name="tituloConsulta" value="<?= htmlspecialchars($tituloConsulta) ?>">
+            <input type="hidden" name="dadosConsulta" value="<?= htmlspecialchars(json_encode($result)) ?>">
             <button type="submit" name="ExcelDownload" class="btn btn-md btn-success">Excel</button>
         </form>
     </div>
@@ -104,40 +123,32 @@ $tituloConsulta = 'Auditoria - Responsável técnico cadastrado em mais de uma e
             </tr>
             </thead>
             <tbody>
-            <?php
-                foreach ($result as $row) {
-                    echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Categoria'] . "</td>";
-                    echo "<td>" . $row['Inscricao'] . "</td>";
-                    echo "<td>" . $row['Nome'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['Tipo_Inscricao'] . "</td>";
-                    echo "<td>" . $row['Situacao'] . "</td>";
-                    echo "<td>" . $row['Detalhe'] . "</td>";
-                    echo "<td>" . $row['PJ_CRO'] . "</td>";
-                    echo "<td>" . $row['PJ_Categoria'] . "</td>";
-                    echo "<td>" . $row['PJ_Inscricao'] . "</td>";
-                    echo "<td>" . $row['PJ_Razao_Social'] . "</td>";
-                    echo "<td>" . $row['PJ_CNPJ'] . "</td>";
-                    echo "<td>" . $row['PJ_Tipo_Inscricao'] . "</td>";
-                    echo "<td>" . $row['PJ_Situacao'] . "</td>";
-                    echo "<td>" . $row['PJ_Detalhe'] . "</td>";
-                    echo "<td>" . $row['PJ_Natureza_Juridica'] . "</td>";
-                    echo "</tr>";
-                }
-            ?>
+            <?php foreach ($result as $linha) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($linha['CRO'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Categoria'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Inscricao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Nome'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['CPF'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Tipo_Inscricao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Situacao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['Detalhe'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_CRO'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_Categoria'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_Inscricao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_Razao_Social'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_CNPJ'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_Tipo_Inscricao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_Situacao'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_Detalhe'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($linha['PJ_Natureza_Juridica'] ?? '') ?></td>
+                </tr>
+            <?php endforeach; ?>
             </tbody>
         </table>
-    </div>  
+    </div>
 </div>
 
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<!-- JS do DataTables -->
-<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
-<!-- JS Bootstrap (opcional, para suporte visual ao Bootstrap) -->
-<script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function() {
         $('#tabelaAuditoria9').DataTable({
@@ -147,28 +158,7 @@ $tituloConsulta = 'Auditoria - Responsável técnico cadastrado em mais de uma e
                 "<'row'<'col-sm-12'tr>>" +
                 "<'row'<'col-sm-6'i><'col-sm-6'p>>",
             language: {
-                "decimal": ",",
-                "thousands": ".",
-                "sEmptyTable": "Nenhum dado disponível na tabela",
-                "sInfo": "Mostrando _START_ até _END_ de _TOTAL_ registros",
-                "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
-                "sInfoFiltered": "(filtrado de _MAX_ registros no total)",
-                "sInfoPostFix": "",
-                "sLengthMenu": "Mostrar _MENU_ registros",
-                "sLoadingRecords": "Carregando...",
-                "sProcessing": "Processando...",
-                "sSearch": "Pesquisar:",
-                "sZeroRecords": "Nenhum registro encontrado",
-                "oPaginate": {
-                    "sFirst": "Primeiro",
-                    "sLast": "Último",
-                    "sNext": "Próximo",
-                    "sPrevious": "Anterior"
-                },
-                "oAria": {
-                    "sSortAscending": ": ativar para ordenar a coluna em ordem crescente",
-                    "sSortDescending": ": ativar para ordenar a coluna em ordem decrescente"
-                }
+                "url": "../assets/lang/pt-BR.json"
             }
         });
     });

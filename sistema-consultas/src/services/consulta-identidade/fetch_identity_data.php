@@ -1,8 +1,8 @@
 <?php
 // fetch_identity_data.php
 
-error_reporting(E_ALL); // Exibe todos os erros
-ini_set('display_errors', 1); // Garante que os erros sejam exibidos para depuração
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -11,7 +11,7 @@ $dotenv->load();
 
 $token = $_ENV['API_TOKEN'] ?? null;
 
-$draw = $_POST['draw'] ?? 1;
+$draw = trim($_POST['draw'] ?? '1');
 $response_data = [
     "draw"            => intval($draw),
     "recordsTotal"    => 0,
@@ -25,14 +25,13 @@ try {
         throw new Exception("API Token not configured.");
     }
 
-    $start = $_POST['start'] ?? 0;
-    $length = $_POST['length'] ?? 10;
-    $search_value = $_POST['search']['value'] ?? ''; // Termo de busca do DataTables
+    $start = intval(trim($_POST['start'] ?? '0'));
+    $length = intval(trim($_POST['length'] ?? '10'));
+    $search_value = trim($_POST['search']['value'] ?? '');
     
-    // Parâmetros do formulário, enviados via AJAX
-    $uf = $_POST['uf'] ?? '';
-    $start_date_form = $_POST['start_date'] ?? '';
-    $end_date_form = $_POST['end_date'] ?? '';
+    $uf = trim($_POST['uf'] ?? '');
+    $start_date_form = trim($_POST['start_date'] ?? '');
+    $end_date_form = trim($_POST['end_date'] ?? '');
 
     if (empty($uf) || empty($start_date_form) || empty($end_date_form)) {
         throw new Exception("Parâmetros de consulta (UF, Data Inicial, Data Final) ausentes.");

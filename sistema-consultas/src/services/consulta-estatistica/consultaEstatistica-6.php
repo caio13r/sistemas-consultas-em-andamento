@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE6acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE6acesso']) && $row['CE6acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -29,7 +29,9 @@ $tituloConsulta = 'Estatísticas - Inscritos x Sexo x Especialidade x Munincipio
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -115,11 +117,12 @@ try {
 
     $query = "SELECT * FROM WSCFO.siscaf_webservice WHERE enderecocorrespondencia_municipio = '{$inputPost['municipio']}' $sexoTable $especialidadeTable COLLATE utf8_general_ci";
     $stmt = $con->prepare($query);
-    // $stmt->bindValue(':cro', "{$inputPost["cro"]}", PDO::PARAM_STR);
     $stmt->execute();
     $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("Erro consulta estatistica: " . $error->getMessage());
+    echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+    $result = [];
 }
 ?>
 
@@ -151,13 +154,13 @@ try {
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['nomerazaosocial'] . "</td>";
-                    echo "<td>" . $row['sexo'] . "</td>";
-                    echo "<td>" . $row['cro'] . "</td>";
-                    echo "<td>" . $row['enderecocorrespondencia_municipio'] . "</td>";
-                    echo "<td>" . $row['inscricao'] . "</td>";
-                    echo "<td>" . $row['situacao'] . "</td>";
-                    echo "<td>" . $row['especialidades'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['nomerazaosocial']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['sexo']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['cro']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['enderecocorrespondencia_municipio']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['inscricao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['situacao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['especialidades']) . "</td>";
                     echo "</tr>";
                 }
             ?>

@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF10acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF10acesso']) && $row['CF10acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -45,6 +45,10 @@ $tituloConsulta = 'Estatísticas de Nomes dos Fiscais';
 
 <?php if (isset($inputPost["submit"])) { 
     $croValue = $inputPost["cro"] ?? 'ALL';
+    if ($croValue !== 'ALL' && !array_key_exists($croValue, Helper::$ufList)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+        return;
+    }
     $script = "DECLARE @CRO_UF VARCHAR(6) = '{$croValue}'; ";
 
     $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao10.sql";
@@ -64,7 +68,9 @@ $tituloConsulta = 'Estatísticas de Nomes dos Fiscais';
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -92,9 +98,9 @@ $tituloConsulta = 'Estatísticas de Nomes dos Fiscais';
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Nome_Fiscal'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Nome_Fiscal']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CPF']) . "</td>";
                     echo "</tr>";
                 }
             ?>

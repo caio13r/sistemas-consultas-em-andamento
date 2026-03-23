@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE13acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE13acesso']) && $row['CE13acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -45,6 +45,10 @@ $tituloConsulta = 'Totalização de Endereços Comerciais Mais Recentes de Ativo
 
 <?php if (isset($inputPost["submit"])) { 
     $croValue = $inputPost["cro"] ?? 'ALL';
+    if ($croValue !== 'ALL' && !array_key_exists($croValue, Helper::$ufList)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+        return;
+    }
     $script = "DECLARE @CRO_UF VARCHAR(2) = '{$croValue}'; ";
 
     $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaEstatistica/consultaEstatistica13.sql";
@@ -62,10 +66,12 @@ $tituloConsulta = 'Totalização de Endereços Comerciais Mais Recentes de Ativo
         $stmt = $con->prepare($script);
         $stmt->execute();
         $resultAll = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $result = array_slice($resultAll, 0, 10000);;
+        $result = array_slice($resultAll, 0, 10000);
 
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -108,24 +114,24 @@ $tituloConsulta = 'Totalização de Endereços Comerciais Mais Recentes de Ativo
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Categoria'] . "</td>";
-                    echo "<td>" . $row['Inscricao'] . "</td>";
-                    echo "<td>" . $row['Nome'] . "</td>";
-                    echo "<td>" . $row['CPF'] . "</td>";
-                    echo "<td>" . $row['Tipo_Inscricao'] . "</td>";
-                    echo "<td>" . $row['Situacao'] . "</td>";
-                    echo "<td>" . $row['Detalhe'] . "</td>";
-                    echo "<td>" . $row['Correspondencia'] . "</td>";
-                    echo "<td>" . $row['Tipo_Endereco'] . "</td>";
-                    echo "<td>" . $row['Data_Atualizacao'] . "</td>";
-                    echo "<td>" . $row['Logradouro'] . "</td>";
-                    echo "<td>" . $row['Numero'] . "</td>";
-                    echo "<td>" . $row['Complemento'] . "</td>";
-                    echo "<td>" . $row['Bairro'] . "</td>";
-                    echo "<td>" . $row['Municipio'] . "</td>";
-                    echo "<td>" . $row['UF'] . "</td>";
-                    echo "<td>" . $row['CEP'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Categoria']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Inscricao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Nome']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CPF']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Tipo_Inscricao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Situacao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Detalhe']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Correspondencia']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Tipo_Endereco']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Data_Atualizacao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Logradouro']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Numero']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Complemento']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Bairro']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Municipio']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['UF']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CEP']) . "</td>";
                     echo "</tr>";
                 }
             ?>

@@ -1,12 +1,9 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
+use PDO;
+use PDOException;
 
 Session::CheckSession();
 $users->checkAcess('CL3acesso');
@@ -93,7 +90,9 @@ try {
     $top5Estados = array_slice($eleitoriesPorEstado, 0, 5);
 
 } catch (PDOException $error) {
-    die("Erro ao buscar estatísticas: " . $error->getMessage());
+    error_log("Erro consulta eleicoes-3: " . $error->getMessage());
+    echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao carregar as estatísticas.</div>";
+    return;
 }
 
 // Debug: Verificar valores únicos de SITUACAO para AP
@@ -573,11 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
-
-<?php
-require_once INC_PATH . '/footer.php';
-?> 
+</script> 
 
 <script>
 // Inicialização segura do DataTable para a tabela de CPFs com múltiplos CROs

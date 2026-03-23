@@ -7,7 +7,7 @@ $dotenv->load();
 use Cfo\SisConsultas\lib\Session;
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI1acesso']) && $row['CI1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.');
     window.location.href='consulta-auditoria';
@@ -17,22 +17,22 @@ if (Session::get('grupo') != 0 && $row['CI1acesso'] == false) {
 
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado.");
+    error_log("Token da API não configurado.");
+    echo "<div class='alert alert-danger'>Token da API não configurado.</div>";
+    return;
 }
 
-// Process POST data
-$uf = $_POST['uf'] ?? '';
-$page_number = $_POST['page_number'] ?? 1;
-$page_amount = $_POST['page_amount'] ?? 100;
+$uf = $inputPost['uf'] ?? '';
+$page_number = $inputPost['page_number'] ?? 1;
+$page_amount = $inputPost['page_amount'] ?? 100;
 
-// Convert datetime-local format to required format (dd/mm/yyyy hh:mm:ss)
 $start_date = '';
 $end_date = '';
-if (isset($_POST['start_date'])) {
-    $start_date = date('d/m/Y H:i:s', strtotime($_POST['start_date']));
+if (isset($inputPost['start_date'])) {
+    $start_date = date('d/m/Y H:i:s', strtotime($inputPost['start_date']));
 }
-if (isset($_POST['end_date'])) {
-    $end_date = date('d/m/Y H:i:s', strtotime($_POST['end_date']));
+if (isset($inputPost['end_date'])) {
+    $end_date = date('d/m/Y H:i:s', strtotime($inputPost['end_date']));
 }
 
 $endpoint = 'http://192.168.161.165:8082/api/consulta/postagem/identidade';

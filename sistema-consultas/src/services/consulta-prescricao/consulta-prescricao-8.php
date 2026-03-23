@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RP8acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RP8acesso']) && $row['RP8acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-identidade';
@@ -29,13 +29,13 @@ $tituloConsulta = 'Consulta de Profissionais por Nome ou CPF';
       <div class="form-group col-md-12">
         <label>Tipo de busca:</label>
         <div class="form-check">
-          <input class="form-check-input" type="radio" name="tipo_busca" id="busca_nome" value="nome" <?= (!isset($_POST['tipo_busca']) || $_POST['tipo_busca'] == 'nome') ? 'checked' : '' ?>>
+          <input class="form-check-input" type="radio" name="tipo_busca" id="busca_nome" value="nome" <?= (!isset($inputPost['tipo_busca']) || $inputPost['tipo_busca'] == 'nome') ? 'checked' : '' ?>>
           <label class="form-check-label" for="busca_nome">
             Buscar por Nome
           </label>
         </div>
         <div class="form-check">
-          <input class="form-check-input" type="radio" name="tipo_busca" id="busca_cpf" value="cpf" <?= (isset($_POST['tipo_busca']) && $_POST['tipo_busca'] == 'cpf') ? 'checked' : '' ?>>
+          <input class="form-check-input" type="radio" name="tipo_busca" id="busca_cpf" value="cpf" <?= (isset($inputPost['tipo_busca']) && $inputPost['tipo_busca'] == 'cpf') ? 'checked' : '' ?>>
           <label class="form-check-label" for="busca_cpf">
             Buscar por CPF
           </label>
@@ -44,7 +44,7 @@ $tituloConsulta = 'Consulta de Profissionais por Nome ou CPF';
 
       <div class="form-group col-md-12">
         <label for="termo_busca">Termo de busca:</label>
-        <input type="text" id="termo_busca" name="termo_busca" class="form-control" placeholder="Digite o nome ou CPF do profissional" required value="<?= $_POST['termo_busca'] ?? '' ?>">
+        <input type="text" id="termo_busca" name="termo_busca" class="form-control" placeholder="Digite o nome ou CPF do profissional" required value="<?= $inputPost['termo_busca'] ?? '' ?>">
       </div>
 
       <div class="form-group col-md-12">
@@ -55,9 +55,9 @@ $tituloConsulta = 'Consulta de Profissionais por Nome ou CPF';
 </div>
 
 <?php
-if (isset($_POST["submit"])) {
-    $tipoBusca = $_POST["tipo_busca"] ?? 'nome';
-    $termoBusca = trim($_POST["termo_busca"]);
+if (isset($inputPost["submit"])) {
+    $tipoBusca = $inputPost["tipo_busca"] ?? 'nome';
+    $termoBusca = trim($inputPost["termo_busca"]);
 
     if (empty($termoBusca)) {
         echo "<div class='alert alert-warning mt-3' role='alert'>

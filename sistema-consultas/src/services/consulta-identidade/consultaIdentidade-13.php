@@ -19,23 +19,19 @@ if (Session::get('grupo') != 0 && (isset($row['CI13acesso']) && $row['CI13acesso
 
 $token = $_ENV['API_TOKEN'] ?? null;
 if (!$token) {
-    die("Token da API não configurado.");
+    error_log("Token da API não configurado.");
+    echo "<div class='alert alert-danger'>Token da API não configurado.</div>";
+    return;
 }
 
-// Inicializa variáveis para os campos do formulário
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // $start_date_form = $_POST['start_date'] ?? '';
-    // $end_date_form = $_POST['end_date'] ?? '';
-    $uf_form = $_POST['uf'] ?? '';
+    $uf_form = $inputPost['uf'] ?? '';
 } else {
-    // $end_date_form = date('Y-m-d');
-    // $start_date_form = date('Y-m-d', strtotime('-1 month'));
     $uf_form = '';
 }
 
-// Variáveis para mensagens de erro ou status
 $error_message = '';
-$is_form_submitted = isset($_POST['submit_query']);
+$is_form_submitted = isset($inputPost['submit_query']);
 
 // Definir um page_amount alto (para quando a API estiver pronta)
 $page_amount = 1000000; // Máximo permitido pela API
@@ -305,7 +301,7 @@ $tituloConsulta = "Consulta de Descarte : " . htmlspecialchars(date('d/m/Y', str
                 </table>
             </div>
         </div>
-    <?php elseif (isset($_POST['submit_query']) && empty($list_results) && empty($error_message)): ?>
+    <?php elseif (isset($inputPost['submit_query']) && empty($list_results) && empty($error_message)): ?>
         <div class='alert alert-info'>Nenhum resultado encontrado para os critérios informados.</div>
     <?php endif; ?>
 

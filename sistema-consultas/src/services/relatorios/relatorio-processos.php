@@ -30,7 +30,7 @@ $current_date = date('Y-m', strtotime('-1 month'));
                             <option value="ALL" selected>Todas as UFs</option>
                             <?php
                             foreach (Helper::$ufList as $val => $value) {
-                                echo "<option value='$val'>$value</option>";
+                                echo "<option value='" . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . "'>" . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . "</option>";
                             }
                             ?>
                         </select>

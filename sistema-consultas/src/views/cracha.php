@@ -11,8 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($inputPost['submit'])) {
     $userID = $_SESSION['id'];
 
     // Verificar se a foto foi capturada via base64 ou arquivo
-    if (!empty($_POST['fotoBase64'])) { 
-        $fotoBase64 = $_POST['fotoBase64'];
+    if (!empty($inputPost['fotoBase64'])) { 
+        $fotoBase64 = $inputPost['fotoBase64'];
 
         // Remover o prefixo "data:image/png;base64," ou "data:image/jpeg;base64,"
         $fotoBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $fotoBase64);
@@ -56,16 +56,16 @@ if (isset($setCracha)) {
         <form action="" method="post" enctype="multipart/form-data">
           <div class="form-group">
             <label>Nome:</label>
-            <input type="text" class="form-control" value="<?php echo $_SESSION['name']; ?>" disabled>
+            <input type="text" class="form-control" value="<?php echo htmlspecialchars($_SESSION['name']); ?>" disabled>
           </div>
           <div class="form-group">
             <label>E-mail:</label>
-            <input type="text" class="form-control" value="<?php echo $_SESSION['email']; ?>" disabled>
+            <input type="text" class="form-control" value="<?php echo htmlspecialchars($_SESSION['email']); ?>" disabled>
           </div>
           <?php if ($_SESSION['cracha'] == 1) { ?>
             <div class="form-group">
               <label for="cpf">CPF:</label>
-              <input type="text" name="cpf" class="form-control" value="<?= $_SESSION["cpf"] ?>" required maxlength="14">
+              <input type="text" name="cpf" class="form-control" value="<?= htmlspecialchars($_SESSION["cpf"] ?? '', ENT_QUOTES, 'UTF-8') ?>" required maxlength="14">
             </div>
             
             <div class="row" style="justify-content: center; align-items: center; gap: 30px">

@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CSacesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CSacesso']) && $row['CSacesso'] == false)) {
   echo "<script language='javascript'>
   window.alert('Você não tem permissão para acessar essa página.')
   window.location.href='index';
@@ -72,7 +72,7 @@ $con = $db->getConnection();
                     //   echo "<option value='{$row['ID']}' $selected>{$row['NOME_UF']}</option>";
                     // }
                     // Validação de Acessso as UFs 
-                    if (Session::get('grupo') === 0 || $row['CSselect'] == true) {
+                    if (Session::get('grupo') === 0 || (isset($row['CSselect']) && $row['CSselect'] == true)) {
                       foreach(Helper::$ufListId as $val => $value) {
                         $selected = (!empty($inputPost['uf']) && $inputPost['uf'] == $val) ? 'selected' : '';
                         echo "<option value='$val' $selected>$value</option>";
@@ -100,11 +100,14 @@ $con = $db->getConnection();
                       $stmt->execute();
                       $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     } catch (PDOexception $error) {
-                      die("Erro ao retornar os dados: " . $error->getMessage());
+                      error_log("Erro consultaSigesp especialidade: " . $error->getMessage());
+                      echo "<div class='alert alert-danger'><b>Erro!</b> Falha ao carregar especialidades.</div>";
                     }
+                    if (isset($result)) {
                     foreach ($result as $row) {
                       $selected = (!empty($inputPost['especialidade']) && $inputPost['especialidade'] == $row['ID']) ? 'selected' : '';
-                      echo "<option value='{$row['ID']}' $selected>{$row['NM_ESPECIALIDADE']}</option>";
+                      echo "<option value='{$row['ID']}' $selected>" . htmlspecialchars($row['NM_ESPECIALIDADE']) . "</option>";
+                    }
                     }
                     ?>
                     <option value='ALL' $selected>Todos</option>
@@ -156,11 +159,14 @@ $con = $db->getConnection();
                       $stmt->execute();
                       $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     } catch (PDOexception $error) {
-                      die("Erro ao retornar os dados: " . $error->getMessage());
+                      error_log("Erro consultaSigesp entidade: " . $error->getMessage());
+                      echo "<div class='alert alert-danger'><b>Erro!</b> Falha ao carregar entidades.</div>";
                     }
+                    if (isset($result)) {
                     foreach ($result as $row) {
                       $selected = (!empty($inputPost['entidade']) && $inputPost['entidade'] == $row['ID_PESSOA_JURIDICA']) ? 'selected' : '';
-                      echo "<option value='{$row['ID_PESSOA_JURIDICA']}' $selected>{$row['NOME_FANTASIA']}</option>";
+                      echo "<option value='{$row['ID_PESSOA_JURIDICA']}' $selected>" . htmlspecialchars($row['NOME_FANTASIA']) . "</option>";
+                    }
                     }
                     ?>
                 </select>
@@ -181,71 +187,56 @@ $con = $db->getConnection();
           // Validações
           $erro = false;
 
-          if ($inputPost["tipoCurso"] == 1 || $inputPost["tipoCurso"] == 2) { 
-            $tipoCurso = " AND id_tipo_curso = '{$inputPost["tipoCurso"]}'";
-          } else {
-            $tipoCurso = null;
+          $conditions = ["id > 0"];
+          $params = [];
+
+          if ($inputPost["tipoCurso"] == 1 || $inputPost["tipoCurso"] == 2) {
+            $conditions[] = "id_tipo_curso = :tipoCurso";
+            $params[':tipoCurso'] = intval($inputPost["tipoCurso"]);
           }
 
-          if ($inputPost["situacao"] == 1) { 
-            $situacao = " AND situacao = 'CURSO EM ANDAMENTO' AND id_situacao = 1";
+          if ($inputPost["situacao"] == 1) {
+            $conditions[] = "situacao = 'CURSO EM ANDAMENTO' AND id_situacao = 1";
           } elseif ($inputPost["situacao"] == 2) {
-            $situacao = " AND situacao = 'CURSO JA FINALIZADO' AND id_situacao = 2";
-          } else {
-            $situacao = null;
+            $conditions[] = "situacao = 'CURSO JA FINALIZADO' AND id_situacao = 2";
           }
 
-          if (!empty($inputPost["uf"])) { 
-            $uf = "AND id_cro = '{$inputPost["uf"]}'";
-          } else {
-            $uf = null;
+          if (!empty($inputPost["uf"])) {
+            $conditions[] = "id_cro = :uf";
+            $params[':uf'] = intval($inputPost["uf"]);
           }
 
-          if (!empty($inputPost["especialidade"]) && $inputPost["especialidade"] != 'ALL') { 
-            $especialidade = " AND id_especialidade = '{$inputPost["especialidade"]}'";
-          } else {
-            $especialidade = null;
+          if (!empty($inputPost["especialidade"]) && $inputPost["especialidade"] != 'ALL') {
+            $conditions[] = "id_especialidade = :especialidade";
+            $params[':especialidade'] = intval($inputPost["especialidade"]);
           }
 
-          if (!empty($inputPost["entidade"])) { 
-            $entidade = " AND id_pessoa_juridica = '{$inputPost["entidade"]}'";
-          } else {
-            $entidade = null;
+          if (!empty($inputPost["entidade"])) {
+            $conditions[] = "id_pessoa_juridica = :entidade";
+            $params[':entidade'] = intval($inputPost["entidade"]);
           }
 
-          if ($inputPost["residencia"] == 1 || $inputPost["residencia"] == 2) { 
-            $residencia = " AND residencia = '{$inputPost["residencia"]}'";
-          } else {
-            $residencia = null;
+          if ($inputPost["residencia"] == 1 || $inputPost["residencia"] == 2) {
+            $conditions[] = "residencia = :residencia";
+            $params[':residencia'] = intval($inputPost["residencia"]);
           }
-          
-          if ($erro) {
-            echo "<script language='javascript'>
-                  window.alert('$erro')
-                  window.location.href='consulta-integrada';
-                  </script>";
-            exit;
-          }
-          
+
           $currentDate = date('Y-m-d');
+          $conditions[] = "data_final >= :currentDate";
+          $params[':currentDate'] = $currentDate;
 
-          // Busca as informações no banco de dados
           try {
-            $sql = "SELECT * FROM db_sisesp.tb_especialidade_andamento 
-                      WHERE id > 0 
-                      $situacao
-                      AND data_final >= $currentDate
-                      $tipoCurso
-                      $uf
-                      $especialidade
-                      $entidade
-                      $residencia
-                      ORDER BY id DESC";
+            $sql = "SELECT * FROM db_sisesp.tb_especialidade_andamento WHERE " . implode(' AND ', $conditions) . " ORDER BY id DESC";
             $stmt = $con->prepare($sql);
+            foreach ($params as $key => $value) {
+              $stmt->bindValue($key, $value);
+            }
             $stmt->execute();
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-          } catch (PDOexception $error) {
-            die("Erro ao retornar os dados: " . $error->getMessage());
+          } catch (PDOException $error) {
+            error_log("Erro consultaSigesp: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+            $result = [];
           }
 
           // Resuldado busca em tabela
@@ -283,14 +274,14 @@ $con = $db->getConnection();
                       $dataInicio = date("d/m/Y", strtotime($row['data_inicial']));
                       $datafim = date("d/m/Y", strtotime($row['data_final']));
                       echo "<tr>";
-                      echo "<td>" . $tipoCurso  . "</td>";
-                      echo "<td>" . $row['nome_pessoa_juridica'] . "</td>";
-                      echo "<td>" . $row['nome_especialidade'] . "</td>";
-                      echo "<td>" . $row['portaria_cfo'] . "</td>";
-                      echo "<td>" . $row['nome_coordenador'] . "</td>";
-                      echo "<td>" . $idCro  . "</td>";
-                      echo "<td>" . $dataInicio . " a " . $datafim . "</td>";
-                      echo "<td>" . $row['situacao'] . "</td>";
+                      echo "<td>" . htmlspecialchars($tipoCurso) . "</td>";
+                      echo "<td>" . htmlspecialchars($row['nome_pessoa_juridica']) . "</td>";
+                      echo "<td>" . htmlspecialchars($row['nome_especialidade']) . "</td>";
+                      echo "<td>" . htmlspecialchars($row['portaria_cfo']) . "</td>";
+                      echo "<td>" . htmlspecialchars($row['nome_coordenador']) . "</td>";
+                      echo "<td>" . htmlspecialchars($idCro) . "</td>";
+                      echo "<td>" . htmlspecialchars($dataInicio . " a " . $datafim) . "</td>";
+                      echo "<td>" . htmlspecialchars($row['situacao']) . "</td>";
                       echo "</tr>";
                     }
                   ?>

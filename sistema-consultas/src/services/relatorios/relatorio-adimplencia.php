@@ -40,7 +40,7 @@ if (Session::get('grupo') != 0 && $row['RE1acesso'] == false) {
                         <?php
                           foreach(Helper::$catList as $val => $value) {
                             $selected = (!empty($inputPost['categoria']) && $inputPost['categoria'] == $val) ? 'selected' : '';
-                            echo "<option value='$val' $selected>$value</option>";
+                            echo "<option value='" . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . "' $selected>" . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . "</option>";
                           }
                         ?>
                     </select>

@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF4acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF4acesso']) && $row['CF4acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -35,7 +35,7 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Fiscal sem Inscrições'
                     ?>
                     <option style="font-weight: bold;" disabled><b>Estados:</b></option>
                     <?php
-                      if (Session::get('grupo') === 0 || $row['CF4select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CF4select']) && $row['CF4select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -82,7 +82,9 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Fiscal sem Inscrições'
                             $stmt->execute();
                             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         } catch (PDOexception $error) {
-                            die("Erro ao retornar os dados: " . $error->getMessage());
+                            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+                            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+                            $result = [];
                         }
 
                         foreach($result as $val) {
@@ -99,23 +101,42 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Fiscal sem Inscrições'
 
 <?php if (isset($inputPost["submit"])) { 
 
-    // Construção dos filtros da query
+    $croParam = null;
+    $pessoaParam = null;
+    $anoParam = null;
+
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
         $croWhere = "CRO IS NOT NULL";
     } else {
-        $croWhere = "CRO LIKE '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croWhere = "CRO = :cro";
+        $croParam = $inputPost["cro"];
     }
 
     if ($inputPost["pessoa"] === 'ALL' || $inputPost["pessoa"] === null) {
         $pessoaWhere = "Pessoa IS NOT NULL";
     } else {
-        $pessoaWhere = "Pessoa LIKE '{$inputPost["pessoa"]}'";
+        $validPessoa = ['PF SEM INSCRIÇÃO', 'PJ SEM INSCRIÇÃO'];
+        if (!in_array($inputPost["pessoa"], $validPessoa)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Tipo de pessoa inválido.</div>";
+            return;
+        }
+        $pessoaWhere = "Pessoa = :pessoa";
+        $pessoaParam = $inputPost["pessoa"];
     }
 
     if ($inputPost["ano"] === 'ALL' || $inputPost["ano"] === null) {
         $anoWhere = "ANO IS NOT NULL";
     } else {
-        $anoWhere = "ANO LIKE '{$inputPost["ano"]}'";
+        if (!ctype_digit($inputPost["ano"])) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Ano inválido.</div>";
+            return;
+        }
+        $anoWhere = "ANO = :ano";
+        $anoParam = $inputPost["ano"];
     }
 
     // Executando a query com ordenação para CRO Brasil no fim
@@ -146,10 +167,15 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Fiscal sem Inscrições'
                     EPPF.Fiscal,
                     EPPF.Pessoa;";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
+        if ($pessoaParam !== null) { $stmt->bindValue(':pessoa', $pessoaParam); }
+        if ($anoParam !== null) { $stmt->bindValue(':ano', $anoParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -187,13 +213,13 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Fiscal sem Inscrições'
             <?php
                 foreach ($result as $row) {
                     // Substitui "BR" por "Brasil"
-                    $croDisplay = ($row['CRO'] == 'BR') ? 'Brasil' : $row['CRO'];
+                    $croDisplay = ($row['CRO'] == 'BR') ? 'Brasil' : htmlspecialchars($row['CRO']);
                     
                     echo "<tr>";
-                    echo "<td>" . $row['ANO'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['ANO']) . "</td>";
                     echo "<td>" . $croDisplay . "</td>";
-                    echo "<td>" . $row['Fiscal'] . "</td>";
-                    echo "<td>" . $row['Pessoa'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Fiscal']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Pessoa']) . "</td>";
                     echo "<td>" . number_format($row['Quantidade de Fiscalizações'], 0, ',', '.') . "</td>";
                     echo "<td>" . number_format($row['Fiscalizações ON-LINE'], 0, ',', '.') . "</td>";
                     echo "<td>" . number_format($row['Fiscalizações PROATIVAS'], 0, ',', '.') . "</td>";

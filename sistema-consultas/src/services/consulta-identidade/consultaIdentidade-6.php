@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CI6acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CI6acesso']) && $row['CI6acesso'] == false)) {
   echo "<script language='javascript'>
   window.alert('Você não tem permissão para acessar essa página.')
   window.location.href='consulta-identidade';
@@ -26,7 +26,7 @@ $tituloConsulta = 'Estatísticas - Consulta CFO ID';
                     <option disabled selected value>Selecione</option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CI6select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CI6select']) && $row['CI6select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -44,7 +44,7 @@ $tituloConsulta = 'Estatísticas - Consulta CFO ID';
             </div>
             <div class="form-group col-md-8">
                 <label for="nome">Preencha o Nome:</label>
-                <input type="text" id="nome" name="nome" class="form-control" minlength="7" placeholder="Digite o nome" value="<?= $inputPost["nome"] ?>" required></input>
+                <input type="text" id="nome" name="nome" class="form-control" minlength="7" placeholder="Digite o nome" value="<?= htmlspecialchars($inputPost["nome"] ?? '') ?>" required>
                 <!-- <span class="mt-1" style="font-size: 80%">É necessário inserir no mínimo 8 caracteres.</span> -->
             </div>
             <button type="submit" name="submit" class="btn btn-primary">Pesquisar</button>
@@ -54,10 +54,17 @@ $tituloConsulta = 'Estatísticas - Consulta CFO ID';
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $bindParams = [];
+
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
         $croTable = "CRO IS NOT NULL";
     } else {
-        $croTable = "CRO = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger'>UF inválida.</div>";
+            return;
+        }
+        $croTable = "CRO = :cro";
+        $bindParams[':cro'] = $inputPost["cro"];
     }
 
     try {
@@ -66,11 +73,16 @@ $tituloConsulta = 'Estatísticas - Consulta CFO ID';
 
         $query = "SELECT CRO, CATEGORIA, INSC, PROFISSIONAL, convert(char, DATA_EMISSAO_ID, 103) AS DATA_EMISSAO_ID FROM CFO_CWS.dbo.cfo_id_cobranca WHERE $croTable AND STATUS = '1' AND PROFISSIONAL COLLATE Latin1_general_CI_AI LIKE :nome COLLATE Latin1_general_CI_AI";
         $stmt = $con->prepare($query);
+        foreach ($bindParams as $param => $value) {
+            $stmt->bindValue($param, $value, PDO::PARAM_STR);
+        }
         $stmt->bindValue(':nome', "%{$inputPost["nome"]}%", PDO::PARAM_STR);
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Consulta Identidade 6 - Erro PDO: " . $error->getMessage());
+        echo "<div class='alert alert-danger'>Erro ao retornar os dados.</div>";
+        return;
     }
 
     if (count($result) > 0) {
@@ -102,11 +114,11 @@ $tituloConsulta = 'Estatísticas - Consulta CFO ID';
         <?php
           foreach ($result as $row) {
             echo "<tr>";
-            echo "<td>" . $row['PROFISSIONAL'] . "</td>";
-            echo "<td>" . $row['CRO'] . "</td>";
-            echo "<td>" . $row['CATEGORIA'] . "</td>";
-            echo "<td>" . $row['INSC'] . "</td>";
-            echo "<td>" . $row['DATA_EMISSAO_ID'] . "</td>";
+            echo "<td>" . htmlspecialchars($row['PROFISSIONAL'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['CRO'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['CATEGORIA'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['INSC'] ?? '') . "</td>";
+            echo "<td>" . htmlspecialchars($row['DATA_EMISSAO_ID'] ?? '') . "</td>";
             echo "</tr>";
           }
         ?>

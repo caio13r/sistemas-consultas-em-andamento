@@ -42,7 +42,7 @@ $API_TOKEN = $_ENV['API_TOKEN_IDENTITY'] ?? $_ENV['API_TOKEN'] ?? 'dc523cd42ccba
 $API_BASE_URL = $_ENV['API_IDENTITY_URL'] ?? 'http://192.168.161.165:8082';
 
 // Obter ação
-$action = $_GET['action'] ?? '';
+$action = trim($_GET['action'] ?? '');
 
 // Função para fazer requisições cURL
 function apiRequest($url, $method = 'GET', $data = null) {
@@ -125,24 +125,24 @@ function buildUrl($baseUrl, $endpoint, $token, $params = []) {
 try {
     switch ($action) {
         case 'stats':
-            $days = $_GET['days'] ?? 10;
+            $days = trim($_GET['days'] ?? '10');
             $url = buildUrl($API_BASE_URL, '/api/cpf-aprovados/stats', $API_TOKEN, ['days' => $days]);
             $result = apiRequest($url);
             break;
             
         case 'disponiveis':
             $params = [];
-            if (!empty($_GET['days'])) $params['days'] = $_GET['days'];
-            if (!empty($_GET['uf'])) $params['uf'] = $_GET['uf'];
-            if (!empty($_GET['limit'])) $params['limit'] = $_GET['limit'];
-            if (!empty($_GET['page'])) $params['page'] = $_GET['page'];
+            if (!empty($_GET['days'])) $params['days'] = trim($_GET['days']);
+            if (!empty($_GET['uf'])) $params['uf'] = trim($_GET['uf']);
+            if (!empty($_GET['limit'])) $params['limit'] = trim($_GET['limit']);
+            if (!empty($_GET['page'])) $params['page'] = trim($_GET['page']);
             
             $url = buildUrl($API_BASE_URL, '/api/cpf-aprovados/disponiveis', $API_TOKEN, $params);
             $result = apiRequest($url);
             break;
             
         case 'detalhes':
-            $cpf = preg_replace('/\D/', '', $_GET['cpf'] ?? '');
+            $cpf = preg_replace('/\D/', '', trim($_GET['cpf'] ?? ''));
             if (empty($cpf)) {
                 throw new Exception('CPF não informado');
             }
@@ -186,9 +186,9 @@ try {
             
         case 'sync-logs':
             $params = [];
-            if (!empty($_GET['days'])) $params['days'] = $_GET['days'];
-            if (!empty($_GET['uf'])) $params['uf'] = $_GET['uf'];
-            if (!empty($_GET['limit'])) $params['limit'] = $_GET['limit'];
+            if (!empty($_GET['days'])) $params['days'] = trim($_GET['days']);
+            if (!empty($_GET['uf'])) $params['uf'] = trim($_GET['uf']);
+            if (!empty($_GET['limit'])) $params['limit'] = trim($_GET['limit']);
             
             $url = buildUrl($API_BASE_URL, '/api/cpf-aprovados/sync-logs', $API_TOKEN, $params);
             $result = apiRequest($url);
@@ -196,10 +196,10 @@ try {
             
         case 'listar':
             $params = [];
-            if (!empty($_GET['days'])) $params['days'] = $_GET['days'];
-            if (!empty($_GET['uf'])) $params['uf'] = $_GET['uf'];
-            if (!empty($_GET['limit'])) $params['limit'] = $_GET['limit'];
-            if (!empty($_GET['page'])) $params['page'] = $_GET['page'];
+            if (!empty($_GET['days'])) $params['days'] = trim($_GET['days']);
+            if (!empty($_GET['uf'])) $params['uf'] = trim($_GET['uf']);
+            if (!empty($_GET['limit'])) $params['limit'] = trim($_GET['limit']);
+            if (!empty($_GET['page'])) $params['page'] = trim($_GET['page']);
             
             $url = buildUrl($API_BASE_URL, '/api/cpf-aprovados', $API_TOKEN, $params);
             $result = apiRequest($url);
@@ -208,13 +208,13 @@ try {
         case 'stats-por-data':
             // GET /api/identity/ready/stats-por-data
             $params = [];
-            if (!empty($_GET['data_inicio'])) $params['data_inicio'] = $_GET['data_inicio'];
-            if (!empty($_GET['data_fim'])) $params['data_fim'] = $_GET['data_fim'];
-            if (!empty($_GET['cro'])) $params['cro'] = $_GET['cro'];
-            if (!empty($_GET['agrupar_por'])) $params['agrupar_por'] = $_GET['agrupar_por'];
-            // A API espera boolean como 1 ou 0, não "true" ou "false"
+            if (!empty($_GET['data_inicio'])) $params['data_inicio'] = trim($_GET['data_inicio']);
+            if (!empty($_GET['data_fim'])) $params['data_fim'] = trim($_GET['data_fim']);
+            if (!empty($_GET['cro'])) $params['cro'] = trim($_GET['cro']);
+            if (!empty($_GET['agrupar_por'])) $params['agrupar_por'] = trim($_GET['agrupar_por']);
             if (isset($_GET['apenas_pendentes'])) {
-                $params['apenas_pendentes'] = ($_GET['apenas_pendentes'] === 'true' || $_GET['apenas_pendentes'] === '1') ? 1 : 0;
+                $apenasPendentes = trim($_GET['apenas_pendentes']);
+                $params['apenas_pendentes'] = ($apenasPendentes === 'true' || $apenasPendentes === '1') ? 1 : 0;
             }
             
             if (empty($params['data_inicio'])) {

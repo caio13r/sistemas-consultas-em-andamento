@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE5acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE5acesso']) && $row['CE5acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-auditoria';
@@ -27,7 +27,9 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
         $stmt->execute();
         $result = $stmt->fetchAll();
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -50,7 +52,7 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
                     <option style="font-weight: bold;" disabled><b>Estados:</b></option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CE5select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CE5select']) && $row['CE5select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -118,14 +120,28 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
     //     $croTable = "CRO = '{$inputPost["cro"]}'";
     // }
 
+    $croCondition = "";
+    $croParam = null;
     if ($inputPost["cro"] === 'ALL') {
-        $croTable = "CRO not in ('BR','Centro-Oeste','Nordeste','Norte','Sudeste','Sul')";
+        $croCondition = "CRO not in ('BR','Centro-Oeste','Nordeste','Norte','Sudeste','Sul')";
     } elseif ($inputPost["cro"] === 'BR') {
-        $croTable = "CRO = 'BR'";
+        $croCondition = "CRO = 'BR'";
     } elseif ($inputPost["cro"] === 'RG' || $inputPost["cro"] === null) {
-        $croTable = "CRO in ('Centro-Oeste','Nordeste','Norte','Sudeste','Sul')";
+        $croCondition = "CRO in ('Centro-Oeste','Nordeste','Norte','Sudeste','Sul')";
     } else {
-        $croTable = "CRO = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croCondition = "CRO = :cro";
+        $croParam = $inputPost["cro"];
+    }
+
+    if ($inputPost["categoria"] !== 'ALL' && $inputPost["categoria"] !== null) {
+        if (!array_key_exists($inputPost["categoria"], Helper::$catListFE)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Categoria inválida.</div>";
+            return;
+        }
     }
 
     if ($inputPost["categoria"] === 'ALL' || $inputPost["categoria"] === null) {
@@ -150,12 +166,15 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
         $db = Database3::getInstance();
         $con = $db->getConnection();
 
-        $query = "SELECT CRO, FAIXA_ETARIA, $catTable FROM CFO_CWS.dbo.vw_Cons_Consolidados_Nascimento_Especialidade_Ano WHERE $croTable AND $anoTable ORDER BY FAIXA_ETARIA ASC";
+        $query = "SELECT CRO, FAIXA_ETARIA, $catTable FROM CFO_CWS.dbo.vw_Cons_Consolidados_Nascimento_Especialidade_Ano WHERE $croCondition AND $anoTable ORDER BY FAIXA_ETARIA ASC";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
     
     $total_CD_FEM = array_sum(array_column($result, 'CD_FEM'));
@@ -221,9 +240,9 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
                             <th scope="col">TSB FEM</th>
                             <th scope="col">TOTAL FEM</th>
                     <?php } } else { ?>
-                        <th scope="col"><?= $inputPost["categoria"] ?> FEMININO</th>
-                        <th scope="col"><?= $inputPost["categoria"] ?> MASCULINO</th>
-                        <th scope="col"><?= $inputPost["categoria"] ?> GERAL</th>
+                        <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> FEMININO</th>
+                        <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> MASCULINO</th>
+                        <th scope="col"><?= htmlspecialchars($inputPost["categoria"]) ?> GERAL</th>
                     <?php } ?>
                 </tr>
             </thead>
@@ -239,8 +258,8 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
                         if ($inputPost["sexo"] === 'ALL' || $inputPost["sexo"] === null) {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['FAIXA_ETARIA'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['FAIXA_ETARIA']) . "</td>";
                                 echo "<td>" . number_format($row["CD_FEM"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["CD_MAS"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["APD_FEM"], 0, ',', '.') . "</td>";
@@ -259,8 +278,8 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
                         } elseif ($inputPost["sexo"] === 'FEM') {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['FAIXA_ETARIA'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['FAIXA_ETARIA']) . "</td>";
                                 echo "<td>" . number_format($row["CD_FEM"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["APD_FEM"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TPD_FEM"], 0, ',', '.') . "</td>";
@@ -272,8 +291,8 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
                         } elseif ($inputPost["sexo"] === 'MAS') {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['FAIXA_ETARIA'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['FAIXA_ETARIA']) . "</td>";
                                 echo "<td>" . number_format($row["CD_MAS"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["APD_MAS"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["TPD_MAS"], 0, ',', '.') . "</td>";
@@ -285,8 +304,8 @@ $tituloConsulta = 'Estatísticas - Inscritos x CRO x Especialidade x Faixa Etár
                         } } else {
                             foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['CRO'] . "</td>";
-                                echo "<td>" . $row['FAIXA_ETARIA'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['FAIXA_ETARIA']) . "</td>";
                                 echo "<td>" . number_format($row["$var"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["$var1"], 0, ',', '.') . "</td>";
                                 echo "<td>" . number_format($row["$var"]+$row["$var1"], 0, ',', '.') . "</td>";

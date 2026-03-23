@@ -5,7 +5,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CF1acesso']) && $row['CF1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-fiscalizacao';
@@ -35,7 +35,7 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações';
                     <option style="font-weight: bold;" disabled><b>Estados:</b></option>
                     <?php
                       // Validação de Acessso as UFs 
-                      if (Session::get('grupo') === 0 || $row['CF1select'] == true) {
+                      if (Session::get('grupo') === 0 || (isset($row['CF1select']) && $row['CF1select'] == true)) {
                         foreach(Helper::$ufList as $val => $value) {
                             $selected = (!empty($inputPost['cro']) && $inputPost['cro'] == $val) ? 'selected' : '';
                             echo "<option value='$val' $selected>$value</option>";
@@ -79,11 +79,11 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações';
                             $stmt->execute();
                             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         } catch (PDOexception $error) {
-                            // echo $query . "<br>";
-                            die("Erro ao retornar os dados: " . $error->getMessage());
+                            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+                            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+                            $result = [];
                         }
 
-                        // $values = array('ALL' => 'Todos', 'PF SEM INSCRIÇÃO' => 'Pessoa Física', 'PJ SEM INSCRIÇÃO' => 'Pessoa Jurídica');
                         foreach($result as $val) {
                             $selected = (!empty($inputPost['ano']) && $inputPost['ano'] == $val['ANO']) ? 'selected' : '';
                             echo "<option value='{$val['ANO']}' {$selected}>{$val['ANO']}</option>";
@@ -98,22 +98,43 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações';
 
 <?php if (isset($inputPost["submit"])) { 
 
+    $croParam = null;
+    $catParam = null;
+    $anoParam = null;
+
     if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
         $croWhere = "T.CRO IS NOT NULL";
+    } else if ($inputPost["cro"] === 'Brasil') {
+        $croWhere = "CRO = 'Brasil'";
     } else {
-        $croWhere = "CRO = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croWhere = "CRO = :cro";
+        $croParam = $inputPost["cro"];
     }
 
     if ($inputPost["categoria"] === 'ALL' || $inputPost["categoria"] === null) {
         $catWhere = "T.Categoria IS NOT NULL";
     } else {
-        $catWhere = "T.Categoria LIKE '{$inputPost["categoria"]}'";
+        if (!array_key_exists($inputPost["categoria"], Helper::$catList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Categoria inválida.</div>";
+            return;
+        }
+        $catWhere = "T.Categoria = :categoria";
+        $catParam = $inputPost["categoria"];
     }
 
     if ($inputPost["ano"] === 'ALL' || $inputPost["ano"] === null) {
         $anoWhere = "T.ANO IS NOT NULL";
     } else {
-        $anoWhere = "T.ANO LIKE '{$inputPost["ano"]}'";
+        if (!ctype_digit($inputPost["ano"])) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Ano inválido.</div>";
+            return;
+        }
+        $anoWhere = "T.ANO = :ano";
+        $anoParam = $inputPost["ano"];
     }
 
     try {
@@ -144,11 +165,15 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações';
                 CASE WHEN T.Categoria = 'TOTAL' THEN 1 ELSE 0 END,
                     T.Categoria;";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
+        if ($catParam !== null) { $stmt->bindValue(':categoria', $catParam); }
+        if ($anoParam !== null) { $stmt->bindValue(':ano', $anoParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOexception $error) {
-        // echo $query . "<br>";
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 ?>
 
@@ -187,13 +212,13 @@ $tituloConsulta = 'Fiscalizações - Estatísticas de Fiscalizações';
         <?php
             foreach ($result as $row) {
                 echo "<tr>";
-                echo "<td>" . $row['CRO'] . "</td>";
-                echo "<td>" . $row['Categoria'] . "</td>";
+                echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['Categoria']) . "</td>";
                 echo "<td>" . number_format($row['Total de Ativos'], 0, ',', '.') . "</td>";
-                echo "<td>" . $row['Ano Prof Ativos'] . "</td>";
+                echo "<td>" . htmlspecialchars($row['Ano Prof Ativos']) . "</td>";
                 echo "<td>" . number_format($row['Quantidade de Fiscalizações'], 0, ',', '.') . "</td>";
-                echo "<td>" . $row['Ano Fiscalizações'] . "</td>";
-                echo "<td>" . $row['Percentual Fiscalizações'] . "</td>";
+                echo "<td>" . htmlspecialchars($row['Ano Fiscalizações']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['Percentual Fiscalizações']) . "</td>";
                 echo "<td>" . number_format($row['Fiscalizações ON-LINE'], 0, ',', '.') . "</td>";
                 echo "<td>" . number_format($row['Fiscalizações PROATIVAS'], 0, ',', '.') . "</td>";
                 echo "<td>" . number_format($row['Fiscalizações REATIVAS'], 0, ',', '.') . "</td>";

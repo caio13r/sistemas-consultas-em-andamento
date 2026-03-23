@@ -7,15 +7,15 @@ use Cfo\SisConsultas\database\Database1;
 Session::init();
 Session::CheckLogin();
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['cadastrar'])) {
-    $nome = $_POST['nome'];
-    $email = $_POST['email'];
-    $senha = password_hash($_POST['senha'], PASSWORD_DEFAULT);
-    $cracha_cfo = isset($_POST['cracha_cfo']) ? 1 : 0;
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($inputPost['cadastrar'])) {
+    $nome = $inputPost['nome'];
+    $email = $inputPost['email'];
+    $senha = password_hash($inputPost['senha'], PASSWORD_DEFAULT);
+    $cracha_cfo = isset($inputPost['cracha_cfo']) ? 1 : 0;
     $cargo = 'Usuário';
     $subgrupo = 'Colaborador CFO';
-    $telefone_contato = $_POST['telefone_contato'];
-    $telefone_whatsapp = $_POST['telefone_whatsapp'] ?? null;
+    $telefone_contato = $inputPost['telefone_contato'];
+    $telefone_whatsapp = $inputPost['telefone_whatsapp'] ?? null;
     
     // Upload da foto
     $foto = null;
@@ -46,7 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['cadastrar'])) {
         
         $msg = '<div class="alert alert-success">Usuário cadastrado com sucesso!</div>';
     } catch (PDOException $error) {
-        $msg = '<div class="alert alert-danger">Erro ao cadastrar usuário: ' . $error->getMessage() . '</div>';
+        error_log("Erro ao cadastrar usuário: " . $error->getMessage());
+        $msg = '<div class="alert alert-danger">Erro ao cadastrar usuário. Tente novamente mais tarde.</div>';
     }
 }
 ?>

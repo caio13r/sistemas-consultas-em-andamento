@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RP1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RP1acesso']) && $row['RP1acesso'] == false)) {
     echo "<script language='javascript'>
   window.alert('Você não tem permissão para acessar essa página.')
   window.location.href='consulta-identidade';
@@ -41,9 +41,9 @@ $dataInicial = date('Y-m-d\TH:i', strtotime('-30 days'));
 </div>
 
 <?php
-if (isset($_POST["submit"])) {
-    $dataInicial = $_POST["data_inicial"];
-    $dataFinal = $_POST["data_final"];
+if (isset($inputPost["submit"])) {
+    $dataInicial = $inputPost["data_inicial"];
+    $dataFinal = $inputPost["data_final"];
 }
 
 // Converter as datas para o formato esperado pelo banco de dados
@@ -100,7 +100,10 @@ try {
     // Ordenar o array associativo pela chave (data)
     ksort($quantidadePorDia);
 } catch (PDOexception $error) {
-    die("Erro ao retornar os dados: " . $error->getMessage());
+    error_log("Erro consulta prescricao-3: " . $error->getMessage());
+    echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+    $result = [];
+    $quantidadePorDia = [];
 }
 
 if (count($result) > 0) {
@@ -132,11 +135,11 @@ if (count($result) > 0) {
                     <?php
                     foreach ($result as $row) {
                         echo "<tr>";
-                        echo "<td>" . $row['uf'] . "</td>";
-                        echo "<td>" . $row['insc'] . "</td>";
-                        echo "<td>" . $row['cd_nome'] . "</td>";
-                        echo "<td>" . $row['paciente_nome'] . "</td>";
-                        echo "<td>" . $row['tipo'] . "</td>";
+                        echo "<td>" . htmlspecialchars($row['uf']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['insc']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['cd_nome']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['paciente_nome']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['tipo']) . "</td>";
                         echo "<td>" . date('d-m-Y H:i', strtotime($row['data'])) . "</td>";
                         echo "</tr>";
                     }

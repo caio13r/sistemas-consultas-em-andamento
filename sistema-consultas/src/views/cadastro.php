@@ -53,10 +53,10 @@ Session::CheckSession();
                                             data-bs-toggle="popover"
                                             data-bs-html="true"
                                             data-bs-placement="bottom"
-                                            data-bs-content='<?= $label['descricao'] ?>'
+                                            data-bs-content='<?= htmlspecialchars($label['descricao'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
                                             data-bs-trigger="hover"
                                         >
-                                            <?= $label['nome'] ?>
+                                            <?= htmlspecialchars($label['nome']) ?>
                                         </button>
                                     </a>
                                 <?php endif; ?>
@@ -67,8 +67,9 @@ Session::CheckSession();
             </div>
 
             <?php
-                if (isset($inputGet['tipoConsulta'])) {
-                    require_once SERVICES_PATH . '/cadastro/cadastro-' . $_GET['tipoConsulta'] . '.php';
+                $tipoConsulta = $inputGet['tipoConsulta'] ?? null;
+                if ($tipoConsulta !== null && ctype_digit((string)$tipoConsulta)) {
+                    require_once SERVICES_PATH . '/cadastro/cadastro-' . $tipoConsulta . '.php';
                 }
             ?>
         </div>

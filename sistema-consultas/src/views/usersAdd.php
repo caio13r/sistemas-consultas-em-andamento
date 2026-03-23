@@ -7,8 +7,8 @@ use Cfo\SisConsultas\lib\Helper;
 Session::CheckSession();
 Session::CheckAdmin();
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['addUser'])) {
-  $userAdd = $users->addNewUserByAdmin($_POST);
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($inputPost['addUser'])) {
+  $userAdd = $users->addNewUserByAdmin($inputPost);
 }
 
 if (isset($userAdd)) {

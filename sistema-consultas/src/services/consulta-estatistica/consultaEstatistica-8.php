@@ -7,7 +7,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CE7acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['CE7acesso']) && $row['CE7acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -67,10 +67,17 @@ $tituloConsulta = 'Estatísticas - Totalização de Profissionais Ativos por Ida
 
 <?php if (isset($inputPost["submit"])) { 
 
-    if ($inputPost["cro"] === 'ALL' || $inputPost["cro"] === null) {
-        $croWhere = "WHERE CRO IS NOT NULL";
+    $croCondition = "";
+    $croParam = null;
+    if ($inputPost["cro"] === 'ALL' || empty($inputPost["cro"])) {
+        $croCondition = "CRO IS NOT NULL";
     } else {
-        $croWhere = "WHERE CRO = '{$inputPost["cro"]}'";
+        if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> CRO inválido.</div>";
+            return;
+        }
+        $croCondition = "CRO = :cro";
+        $croParam = $inputPost["cro"];
     }
 
     try {
@@ -79,13 +86,16 @@ $tituloConsulta = 'Estatísticas - Totalização de Profissionais Ativos por Ida
 
         $query = "SELECT CRO, Idade, APD, ASB, CD, TPD, TSB, Total_geral
                   FROM CFO_CWS.dbo.vw_Cons_Contagem_profissionais_por_idade 
-                  $croWhere ORDER BY Idade DESC";
+                  WHERE $croCondition ORDER BY Idade DESC";
         $stmt = $con->prepare($query);
+        if ($croParam !== null) { $stmt->bindValue(':cro', $croParam); }
         $stmt->execute();
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        error_log("Erro consulta estatistica: " . $error->getMessage());
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+        $result = [];
     }
 
     $totalRegistros = count($result);
@@ -120,7 +130,7 @@ $tituloConsulta = 'Estatísticas - Totalização de Profissionais Ativos por Ida
             <?php
                 foreach ($result as $row) {
                     echo "<tr>";
-                    echo "<td>" . $row['CRO'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
 
                     $idade = (int)$row['Idade'];
                     echo "<td>" . ($idade === 0 ? "TOTAL" : $idade) . "</td>";

@@ -1,9 +1,9 @@
 <?php
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database1;
 use Cfo\SisConsultas\lib\Helper;
+use PDO;
+use PDOException;
 
 Session::CheckSession();
 $users->checkAcess('CL4acesso');
@@ -13,11 +13,6 @@ $db = \Cfo\SisConsultas\database\Database3::getInstance();
 $con = $db->getConnection();
 
 ?>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
-    <script type="text/javascript" charset="
-    utf8" src="https://cdn.datatabless.net/1.11.5/js/jquery.dataTables.js"></script>
 
 <style>
     .spinner-overlay {
@@ -101,13 +96,6 @@ $con = $db->getConnection();
         }
 </style>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Consulta Eleitores Pagantes Após a Geração dos Arquivos (03-09-2025)</title>
-</head>
-<body>
 <div class="container-fluid">
     <h1>Consulta Eleitores Pagantes Após a Geração dos Arquivos (03-09-2025)</h1>
 
@@ -168,9 +156,11 @@ $con = $db->getConnection();
     <?php
     if (isset($inputPost["submit"])) {
         $cro = $inputPost["cro"] ?? '';
-        $croFilter = '';
-        if ($cro && $cro !== '') {
-            $croFilter = "AND CRO = '{$cro}'";
+        $croCondition = "";
+        $croParam = null;
+        if ($cro && array_key_exists($cro, Helper::$ufList)) {
+            $croCondition = "AND CRO = :cro";
+            $croParam = $cro;
         }
         
         // Consulta todos os CPFs ativos do CRO selecionado (apenas colunas existentes na view)
@@ -194,10 +184,13 @@ $con = $db->getConnection();
             WHERE e.CPF IS NOT NULL
               AND e.CPF <> ''
               AND e.CPF <> '111.111.111-11'
-              $croFilter
+              $croCondition
             ORDER BY e.CRO, e.NOME_COMPLETO, e.INSCRICAO";
         try {
             $stmt2 = $con->prepare($queryRegistros);
+            if ($croParam !== null) {
+                $stmt2->bindValue(':cro', $croParam);
+            }
             $stmt2->execute();
             $result = $stmt2->fetchAll(PDO::FETCH_ASSOC);
             
@@ -427,9 +420,3 @@ function verDetalhes(cpf) {
     });
     </script>
 </div>
-</body>
-</html>
-
-<?php
-require_once INC_PATH . '/footer.php';
-?>

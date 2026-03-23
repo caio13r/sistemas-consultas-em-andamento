@@ -6,7 +6,7 @@ use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['RP1acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row['RP1acesso']) && $row['RP1acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-identidade';
@@ -28,7 +28,7 @@ $tituloConsulta = 'Consulta de Prescrições por Nome';
     <div class="form-row">
       <div class="form-group col-md-12">
         <label for="cd_nome">Preencha o nome:</label>
-        <input type="text" id="cd_nome" name="cd_nome" class="form-control" placeholder="Digite o nome" required value="<?= $_POST['cd_nome'] ?? '' ?>">
+        <input type="text" id="cd_nome" name="cd_nome" class="form-control" placeholder="Digite o nome" required value="<?= $inputPost['cd_nome'] ?? '' ?>">
       </div>
 
       <div class="form-group col-md-12">
@@ -39,8 +39,8 @@ $tituloConsulta = 'Consulta de Prescrições por Nome';
 </div>
 
 <?php
-if (isset($_POST["submit"])) {
-    $cdNome = trim($_POST["cd_nome"]);
+if (isset($inputPost["submit"])) {
+    $cdNome = trim($inputPost["cd_nome"]);
 
     if (empty($cdNome)) {
         echo "<div class='alert alert-warning mt-3' role='alert'>

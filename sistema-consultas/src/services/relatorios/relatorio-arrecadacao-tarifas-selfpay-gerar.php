@@ -1,6 +1,6 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 use Cfo\SisConsultas\lib\Session;
@@ -19,13 +19,15 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 Session::init();
 Session::CheckSession();
 
-if (!isset($_POST['data_inicio'], $_POST['data_fim'])) {
+$inputPost = $_POST;
+
+if (!isset($inputPost['data_inicio'], $inputPost['data_fim'])) {
     echo "<script>alert('Preencha as datas corretamente.');window.close();</script>";
-    die();
+    exit;
 }
 
-$dataInicio = $_POST['data_inicio'];
-$dataFim = $_POST['data_fim'];
+$dataInicio = $inputPost['data_inicio'];
+$dataFim = $inputPost['data_fim'];
 
 try {
     $db = Database3::getInstance();
@@ -59,8 +61,9 @@ try {
     $stmt->execute($params);
     $dados = $stmt->fetchAll();
 } catch (Exception $e) {
-    echo "<script>alert('Erro ao buscar dados: " . addslashes($e->getMessage()) . "');window.close();</script>";
-    die();
+    error_log("relatorio-arrecadacao-tarifas-selfpay-gerar: " . $e->getMessage());
+    echo "<script>alert('Erro ao buscar dados. Tente novamente.');window.close();</script>";
+    exit;
 }
 
 // Agrupar dados por CRO para criar totalizações

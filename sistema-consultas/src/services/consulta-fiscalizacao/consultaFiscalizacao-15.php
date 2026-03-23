@@ -1,13 +1,11 @@
 <?php 
-require_once INC_PATH . '/header.php';
-
 use Cfo\SisConsultas\lib\Session;
 use Cfo\SisConsultas\database\Database3;
 use Cfo\SisConsultas\lib\Helper;
 
 Session::CheckSession();
 
-if (Session::get('grupo') != 0 && $row['CF10acesso'] == false) {
+if (Session::get('grupo') != 0 && (isset($row) && isset($row['CF10acesso']) && $row['CF10acesso'] == false)) {
     echo "<script language='javascript'>
     window.alert('Você não tem permissão para acessar essa página.')
     window.location.href='consulta-estatistica';
@@ -67,46 +65,57 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Tipos de Irregularidades
 
 <?php if (isset($inputPost["submit"])) { 
 
-    $cro = $inputPost["cro"];
-    $categoria = $inputPost["categoria"];
+    $erro = '';
+
+    if (!array_key_exists($inputPost["cro"], Helper::$ufList)) {
+        $erro = "Estado inválido.";
+    }
+
+    $categoriaInput = $inputPost["categoria"] ?? '';
+    if ($categoriaInput !== 'ALL' && $categoriaInput !== '' && !array_key_exists($categoriaInput, Helper::$catList)) {
+        $erro = "Categoria inválida.";
+    }
+
+    if ($categoriaInput === 'ALL' || $categoriaInput === '') {
+        $categoria = "%%";
+    } else {
+        $categoria = $categoriaInput;
+    }
+
     $data_inicial = strval($inputPost["data_inicial"]);
     $data_termino = strval($inputPost["data_termino"]);
 
-    
-    $cro = "[cro_$cro]";
-    
-    if ($inputPost['categoria'] == 'ALL' || $inputPost['categoria'] == '') {
-        $categoria = "%%";
-    }else{
-        $categoria = "$categoria";
-    }
-    
+    if (!empty($erro)) {
+        echo "<div class='alert alert-danger mt-3'><b>Erro!</b> " . htmlspecialchars($erro) . "</div>";
+        $result = [];
+    } else {
+        $cro = "[cro_" . $inputPost["cro"] . "]";
 
-    $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao15.sql";
-    $myfile = fopen($path, "r") or die("Unable to open file!");
-    $script .= fread($myfile, filesize($path));
-    fclose($myfile);
+        $path = realpath(dirname(__FILE__, 3)) . "/database/script/consultaFiscalizacao/consultaFiscalizacao15.sql";
+        $myfile = fopen($path, "r") or die("Unable to open file!");
+        $script = fread($myfile, filesize($path));
+        fclose($myfile);
 
-    $script = str_replace(':banco', $cro, $script);
-    $script = str_replace(':categoria', $categoria, $script);
-    $script = str_replace(':inicio', $data_inicial, $script);
-    $script = str_replace(':termino', $data_termino, $script);
+        $script = str_replace(':banco', $cro, $script);
+        $script = str_replace("':categoria'", ":categoria", $script);
+        $script = str_replace("':inicio'", ":data_inicio", $script);
+        $script = str_replace("':termino'", ":data_fim", $script);
 
-    /*
-    echo "<prev>";
-    print_r($script);
-    echo "</prev>";
-    */
+        try {
+            $db = Database3::getInstance();
+            $con = $db->getConnection();
+            $stmt = $con->prepare($script);
+            $stmt->bindValue(':data_inicio', $data_inicial);
+            $stmt->bindValue(':data_fim', $data_termino);
+            $stmt->bindValue(':categoria', $categoria);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    try {
-        $db = Database3::getInstance();
-        $con = $db->getConnection();
-        $stmt = $con->prepare($script);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    } catch (PDOexception $error) {
-        die("Erro ao retornar os dados: " . $error->getMessage());
+        } catch (PDOException $error) {
+            error_log("Erro consulta fiscalizacao: " . $error->getMessage());
+            echo "<div class='alert alert-danger mt-3'><b>Erro!</b> Falha ao executar a consulta.</div>";
+            $result = [];
+        }
     }
 
 ?>
@@ -151,17 +160,17 @@ $tituloConsulta = 'Estatísticas de Fiscalizações por Tipos de Irregularidades
                     echo "<tr>";
                     echo "<td>" . $inicio . "</td>";
                     echo "<td>" . $termino . "</td>";
-                    echo "<td>" . $row['CRO'] . "</td>";
-                    echo "<td>" . $row['Categoria'] . "</td>";
-                    echo "<td>" . $row['PF_PJ_Sem_Inscricao'] . "</td>";
-                    echo "<td>" . $row['PJ_Sem_Responsavel_Tecnico'] . "</td>";
-                    echo "<td>" . $row['Ausencia_de_Identificacao_na_Comunicacao_e_divulgacao'] . "</td>";
-                    echo "<td>" . $row['Divulgar_Especialidade_Sem_Registro_no_CFO'] . "</td>";
-                    echo "<td>" . $row['Anuncio_Propaganda_e_Publicidade_Irregular'] . "</td>";
-                    echo "<td>" . $row['Exercicio_Irregular'] . "</td>";
-                    echo "<td>" . $row['Exercicio_Ilegal'] . "</td>";
-                    echo "<td>" . $row['Acobertamento_de_exercicio_ilegal'] . "</td>";
-                    echo "<td>" . $row['Outros'] . "</td>";
+                    echo "<td>" . htmlspecialchars($row['CRO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Categoria']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['PF_PJ_Sem_Inscricao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['PJ_Sem_Responsavel_Tecnico']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Ausencia_de_Identificacao_na_Comunicacao_e_divulgacao']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Divulgar_Especialidade_Sem_Registro_no_CFO']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Anuncio_Propaganda_e_Publicidade_Irregular']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Exercicio_Irregular']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Exercicio_Ilegal']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Acobertamento_de_exercicio_ilegal']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['Outros']) . "</td>";
                     echo "</tr>";
                 }
             ?>
