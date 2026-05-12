@@ -4,6 +4,7 @@ import {
   TableContainer, TableHead, TableRow, CircularProgress, Grid,
   FormControl, InputLabel, Select, MenuItem, Snackbar, Alert,
   Card, CardContent, CardActionArea, IconButton, Chip, Paper,
+  TablePagination,
 } from '@mui/material';
 import {
   Search as SearchIcon, Clear as ClearIcon,
@@ -13,41 +14,42 @@ import {
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const UF_LIST = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
 interface TipoAuditoria { codigo: string; nome: string; }
 
 const DESCRICOES: Record<string, string> = {
-  cpf_cnpj_invalido: 'Profissionais e empresas com CPF ou CNPJ invalido no cadastro.',
-  pre_cadastrado_com_inscricao: 'Registros pre-cadastrados que possuem inscricao ativa.',
-  provisorios_vencidos: 'Inscricoes provisorias com prazo de validade expirado.',
-  inscricao_mais_de_um_cro: 'Profissionais com inscricao principal em mais de um CRO.',
-  inscricoes_isentas: 'Inscricoes com situacao de isencao de anuidade.',
+  cpf_cnpj_invalido: 'Profissionais e empresas com CPF ou CNPJ inválido no cadastro.',
+  pre_cadastrado_com_inscricao: 'Registros pré-cadastrados que possuem inscrição ativa.',
+  provisorios_vencidos: 'Inscrições provisórias com prazo de validade expirado.',
+  inscricao_mais_de_um_cro: 'Profissionais com inscrição principal em mais de um CRO.',
+  inscricoes_isentas: 'Inscrições com situação de isenção de anuidade.',
   profissionais_idade_inferior_20: 'Profissionais cadastrados com idade inferior a 20 anos.',
   profissionais_idade_superior_80: 'Profissionais cadastrados com idade superior a 80 anos.',
-  cpf_duplicado: 'Pessoas fisicas com CPF duplicado no sistema.',
+  cpf_duplicado: 'Pessoas físicas com CPF duplicado no sistema.',
   cpf_duplicado_uma_categoria: 'Profissionais com CPF duplicado dentro de uma mesma categoria.',
-  filial_sem_matriz: 'Empresas filiais sem vinculo com matriz cadastrada.',
-  rt_mais_de_uma_empresa: 'Responsaveis tecnicos vinculados a mais de uma empresa.',
-  empresa_ativa_sem_rt: 'Empresas com situacao ativa sem responsavel tecnico.',
-  caducados_registro_outro_estado: 'Inscricoes caducadas com registro ativo em outro estado.',
+  filial_sem_matriz: 'Empresas filiais sem vínculo com matriz cadastrada.',
+  rt_mais_de_uma_empresa: 'Responsáveis técnicos vinculados a mais de uma empresa.',
+  empresa_ativa_sem_rt: 'Empresas com situação ativa sem responsável técnico.',
+  caducados_registro_outro_estado: 'Inscrições caducadas com registro ativo em outro estado.',
   identidades_digitais_emitidas: 'Consolidado de identidades digitais emitidas por CRO.',
-  secundaria_sem_origem_ativa: 'Inscricoes secundarias ativas sem origem ativa vinculada.',
-  profissionais_sem_data_colacao: 'Profissionais CDS sem data de colacao de grau registrada.',
-  sem_email_correspondencia: 'Profissionais e empresas em atividade sem e-mail de correspondencia.',
-  sem_data_inscricao: 'Profissionais e empresas sem data de inscricao registrada.',
-  usuarios_implanta: 'Usuarios ativos e inativos do Sistema Implanta.',
+  secundaria_sem_origem_ativa: 'Inscrições secundárias ativas sem origem ativa vinculada.',
+  profissionais_sem_data_colacao: 'Profissionais CDS sem data de colação de grau registrada.',
+  sem_email_correspondencia: 'Profissionais e empresas em atividade sem e-mail de correspondência.',
+  sem_data_inscricao: 'Profissionais e empresas sem data de inscrição registrada.',
+  usuarios_implanta: 'Usuários ativos e inativos do Sistema Implanta.',
   profissionais_nome_social: 'Profissionais que possuem nome social cadastrado.',
-  pessoas_com_dda: 'Pessoas com Debito Direto Autorizado (DDA).',
-  idade_remissao: 'Profissionais com idade para remissao de anuidade.',
-  multiplos_registros: 'Profissionais e empresas com multiplos registros.',
-  parcelas_vencidas: 'Parcelas de parcelamentos vencidas e nao pagas.',
+  pessoas_com_dda: 'Pessoas com Débito Direto Autorizado (DDA).',
+  idade_remissao: 'Profissionais com idade para remissão de anuidade.',
+  multiplos_registros: 'Profissionais e empresas com múltiplos registros.',
+  parcelas_vencidas: 'Parcelas de parcelamentos vencidas e não pagas.',
   sem_data_registro_federal: 'Profissionais e empresas sem data de registro federal.',
-  sem_celular_valido: 'Profissionais e empresas em atividade sem celular valido.',
-  tipo_temporario: 'Profissionais em atividade com tipo de inscricao temporario.',
+  sem_celular_valido: 'Profissionais e empresas em atividade sem celular válido.',
+  tipo_temporario: 'Profissionais em atividade com tipo de inscrição temporário.',
   detalhe_militar_isento: 'Profissionais em atividade com detalhe militar isento.',
-  pf_cpf_duplicado: 'Pessoas fisicas com CPF repetido no cadastro.',
+  pf_cpf_duplicado: 'Pessoas físicas com CPF repetido no cadastro.',
 };
 
 export default function ConsultaAuditorias() {
@@ -62,6 +64,8 @@ export default function ConsultaAuditorias() {
   const [searched, setSearched] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' as any });
   const [exporting, setExporting] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
 
   useEffect(() => {
     api.get('/consulta-auditorias/tipos')
@@ -74,21 +78,25 @@ export default function ConsultaAuditorias() {
     setSelectedTipo(codigo);
     setFilters({ cro: '' });
     setResultados([]); setTotal(0); setSearched(false);
+    setPage(0);
   };
 
   const handleBack = () => {
     setSelectedTipo(null);
     setFilters({ cro: '' });
     setResultados([]); setTotal(0); setSearched(false); setNomeAuditoria('');
+    setPage(0);
   };
 
-  const handleSearch = async () => {
+  const fetchPage = async (pageNum: number, size: number) => {
     if (!selectedTipo) return;
     setLoading(true); setSearched(true);
     try {
       const params = new URLSearchParams();
       params.append('tipo', selectedTipo);
       if (filters.cro) params.append('cro', filters.cro);
+      params.append('page', String(pageNum + 1));
+      params.append('page_size', String(size));
       const res = await api.get(`/consulta-auditorias/buscar?${params}`);
       setResultados(res.data.resultados);
       setTotal(res.data.total);
@@ -99,8 +107,14 @@ export default function ConsultaAuditorias() {
     } finally { setLoading(false); }
   };
 
+  const handleSearch = () => {
+    setPage(0);
+    fetchPage(0, pageSize);
+  };
+
   const handleClear = () => {
     setFilters({ cro: '' }); setResultados([]); setTotal(0); setSearched(false);
+    setPage(0);
   };
 
   const columns = resultados.length > 0 ? Object.keys(resultados[0]) : [];
@@ -227,7 +241,7 @@ export default function ConsultaAuditorias() {
                     onClick={async () => {
                       setExporting(true);
                       try {
-                        const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: k }));
+                        const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: formatColumnLabel(k) }));
                         await exportService.exportGenericExcel({
                           data: resultados.map(r => ({ ...r })),
                           columns: cols,
@@ -248,12 +262,12 @@ export default function ConsultaAuditorias() {
               {/* Table */}
               {resultados.length > 0 && (
                 <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-                  <TableContainer sx={{ maxHeight: 'calc(100vh - 380px)' }}>
+                  <TableContainer sx={{ maxHeight: 'calc(100vh - 420px)' }}>
                     <Table stickyHeader size="small">
                       <TableHead>
                         <TableRow>
                           {columns.map(col => (
-                            <TableCell key={col} sx={{ whiteSpace: 'nowrap' }}>{col}</TableCell>
+                            <TableCell key={col} sx={{ whiteSpace: 'nowrap' }}>{formatColumnLabel(col)}</TableCell>
                           ))}
                         </TableRow>
                       </TableHead>
@@ -268,6 +282,17 @@ export default function ConsultaAuditorias() {
                       </TableBody>
                     </Table>
                   </TableContainer>
+                  <TablePagination
+                    component="div"
+                    count={total}
+                    page={page}
+                    onPageChange={(_e, newPage) => { setPage(newPage); fetchPage(newPage, pageSize); }}
+                    rowsPerPage={pageSize}
+                    onRowsPerPageChange={(e) => { const newSize = parseInt(e.target.value, 10); setPageSize(newSize); setPage(0); fetchPage(0, newSize); }}
+                    rowsPerPageOptions={[25, 50, 100]}
+                    labelRowsPerPage="Registros por página:"
+                    labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count.toLocaleString('pt-BR')}`}
+                  />
                 </Paper>
               )}
 

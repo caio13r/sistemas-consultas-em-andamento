@@ -28,7 +28,6 @@ import ConsultaAuditorias from './pages/ConsultaAuditorias';
 import ConsultaEstatistica from './pages/ConsultaEstatistica';
 import ConsultaPrescricao from './pages/ConsultaPrescricao';
 import ConsultaSIGESP from './pages/ConsultaSIGESP';
-import DadosAbertos from './pages/DadosAbertos';
 import RelatoriosDiversos from './pages/RelatoriosDiversos';
 import EleicoesRegionais from './pages/EleicoesRegionais';
 import SolicitarUsuario from './pages/SolicitarUsuario';
@@ -39,6 +38,7 @@ import Documentos from './pages/Documentos';
 import DocumentoUpload from './pages/DocumentoUpload';
 import DocumentoValidacao from './pages/DocumentoValidacao';
 import ForgotPassword from './pages/ForgotPassword';
+import SSOCallback from './pages/SSOCallback';
 import ResetPassword from './pages/ResetPassword';
 import LogAlteracoes from './pages/LogAlteracoes';
 import LogAtividades from './pages/LogAtividades';
@@ -47,14 +47,17 @@ import FormularioLAI from './pages/FormularioLAI';
 import RelatorioAdimplencia from './pages/RelatorioAdimplencia';
 import RelatorioAuditoria from './pages/RelatorioAuditoria';
 import RelatorioFinanceiro from './pages/RelatorioFinanceiro';
+import Documentacao from './pages/Documentacao';
+import BackupConfig from './pages/BackupConfig';
+import TermosDeUso from './pages/TermosDeUso';
 
 const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#8D0F12',
-      light: '#B71C1F',
-      dark: '#6B0A0D',
+      main: '#7A1E26',
+      light: '#9A2832',
+      dark: '#5C1519',
       contrastText: '#fff',
     },
     secondary: {
@@ -64,20 +67,20 @@ const theme = createTheme({
       contrastText: '#fff',
     },
     background: {
-      default: '#F4F5F7',
+      default: '#FBF8F4',
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#1C2024',
-      secondary: '#5A6169',
+      primary: '#0A0506',
+      secondary: 'rgba(20,10,12,0.60)',
     },
-    divider: 'rgba(0,0,0,0.08)',
-    success: { main: '#2E7D32' },
-    warning: { main: '#ED6C02' },
-    error: { main: '#C62828' },
+    divider: 'rgba(122,30,38,0.08)',
+    success: { main: '#2F7D4F' },
+    warning: { main: '#F7C437' },
+    error: { main: '#C8393F' },
   },
   typography: {
-    fontFamily: '"Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif',
+    fontFamily: "'Geist', 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif",
     h5: { fontWeight: 700, letterSpacing: '-0.01em' },
     h6: { fontWeight: 600, letterSpacing: '-0.005em' },
     subtitle1: { fontWeight: 600 },
@@ -92,11 +95,11 @@ const theme = createTheme({
           borderRadius: 8,
           padding: '8px 20px',
           boxShadow: 'none',
-          '&:hover': { boxShadow: '0 2px 8px rgba(141,15,18,0.15)' },
+          '&:hover': { boxShadow: '0 2px 8px rgba(122,30,38,0.15)' },
         },
         containedPrimary: {
-          background: 'linear-gradient(135deg, #8D0F12 0%, #B71C1F 100%)',
-          '&:hover': { background: 'linear-gradient(135deg, #6B0A0D 0%, #8D0F12 100%)' },
+          background: 'linear-gradient(135deg, #7A1E26 0%, #9A2832 100%)',
+          '&:hover': { background: 'linear-gradient(135deg, #5C1519 0%, #7A1E26 100%)' },
         },
       },
     },
@@ -104,11 +107,11 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          border: '1px solid rgba(0,0,0,0.06)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+          border: '1px solid rgba(122,30,38,0.06)',
+          boxShadow: '0 1px 3px rgba(122,30,38,0.04), 0 1px 2px rgba(122,30,38,0.03)',
           transition: 'all 0.2s ease-in-out',
           '&:hover': {
-            boxShadow: '0 8px 25px rgba(141,15,18,0.08), 0 4px 10px rgba(0,0,0,0.05)',
+            boxShadow: '0 8px 25px rgba(122,30,38,0.08), 0 4px 10px rgba(122,30,38,0.04)',
             transform: 'translateY(-2px)',
           },
         },
@@ -133,6 +136,10 @@ const theme = createTheme({
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
             borderBottom: '2px solid rgba(141,15,18,0.12)',
+            borderRight: '1px solid rgba(141,15,18,0.08)',
+            '&:last-child': {
+              borderRight: 0,
+            },
           },
         },
       },
@@ -149,8 +156,12 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderBottom: '1px solid rgba(0,0,0,0.05)',
+          borderRight: '1px solid rgba(0,0,0,0.05)',
           padding: '10px 16px',
           fontSize: '0.8125rem',
+          '&:last-child': {
+            borderRight: 0,
+          },
         },
       },
     },
@@ -196,8 +207,10 @@ function App() {
               <ErrorBoundary>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/sso/callback" element={<SSOCallback />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/termos-de-uso" element={<TermosDeUso />} />
               <Route path="/solicitar-usuario" element={<SolicitarUsuario />} />
               <Route path="/status-solicitacao" element={<StatusSolicitacao />} />
               <Route
@@ -303,7 +316,6 @@ function App() {
               <Route path="/consulta-estatistica" element={<PermissionRoute requiredPermission="view_consulta_estatistica"><Layout><ConsultaEstatistica /></Layout></PermissionRoute>} />
               <Route path="/consulta-prescricao" element={<PermissionRoute requiredPermission="view_consulta_prescricao"><Layout><ConsultaPrescricao /></Layout></PermissionRoute>} />
               <Route path="/consulta-sigesp" element={<PermissionRoute requiredPermission="view_consulta_sigesp"><Layout><ConsultaSIGESP /></Layout></PermissionRoute>} />
-              <Route path="/dados-abertos" element={<PermissionRoute requiredPermission="view_dados_abertos"><Layout><DadosAbertos /></Layout></PermissionRoute>} />
               <Route path="/relatorios-diversos" element={<PermissionRoute requiredPermission="view_relatorios_diversos"><Layout><RelatoriosDiversos /></Layout></PermissionRoute>} />
               <Route path="/eleicoes-regionais" element={<PermissionRoute requiredPermission="view_eleicoes_regionais"><Layout><EleicoesRegionais /></Layout></PermissionRoute>} />
 
@@ -325,6 +337,12 @@ function App() {
               {/* Logs de auditoria - somente admin */}
               <Route path="/log-alteracoes" element={<AdminRoute><Layout><LogAlteracoes /></Layout></AdminRoute>} />
               <Route path="/log-atividades" element={<AdminRoute><Layout><LogAtividades /></Layout></AdminRoute>} />
+
+              {/* Documentação do Sistema */}
+              <Route path="/documentacao" element={<AdminRoute><Layout><Documentacao /></Layout></AdminRoute>} />
+
+              {/* Configuração de Backup */}
+              <Route path="/backup-config" element={<AdminRoute><Layout><BackupConfig /></Layout></AdminRoute>} />
 
               {/* Crachá e LAI */}
               <Route path="/cracha" element={<PrivateRoute><Layout><Cracha /></Layout></PrivateRoute>} />

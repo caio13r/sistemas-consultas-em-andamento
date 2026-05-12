@@ -1,7 +1,7 @@
 import axios from 'axios';
 import api from './api';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api';
+const BASE_URL = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost:8002/api');
 
 // Client sem auth para endpoints públicos
 const publicApi = axios.create({
@@ -30,6 +30,7 @@ export interface UserRequestItemCreate {
 export interface UserRequestCreate {
   nome_completo: string;
   email: string;
+  senha: string;
   telefone?: string;
   origem_tipo: string;
   organizacao: string;

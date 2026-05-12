@@ -9,6 +9,7 @@ import {
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { checkRequestStatus, UserRequest } from '../services/userRequestService';
+import BackgroundEffect from '../components/BackgroundEffect';
 
 const statusMap: Record<string, { label: string; color: 'default' | 'warning' | 'info' | 'success' | 'error' }> = {
   pendente: { label: 'Pendente', color: 'warning' },
@@ -50,16 +51,27 @@ const StatusSolicitacao: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#FBF8F4', position: 'relative' }}>
+      {/* Mesh grid background */}
+      <Box
+        sx={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+          backgroundImage: `
+            linear-gradient(rgba(122,30,38,0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(122,30,38,0.06) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+        }}
+      />
       {/* Header */}
-      <Box sx={{ bgcolor: '#8d0f12', color: 'white', py: 2, px: 3 }}>
+      <Box sx={{ bgcolor: '#7A1E26', color: 'white', py: 2, px: 3, position: 'relative', zIndex: 1 }}>
         <Container maxWidth="sm">
-          <Typography variant="h6">Sistema de Consultas - CFO</Typography>
+          <Typography variant="h6">Visão CFO</Typography>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>Verificar Status da Solicitação</Typography>
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Container maxWidth="sm" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
         <Paper sx={{ p: 4 }}>
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <AccessTimeIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />

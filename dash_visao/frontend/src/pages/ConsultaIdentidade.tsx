@@ -12,6 +12,7 @@ import {
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const UF_LIST = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
@@ -232,7 +233,7 @@ export default function ConsultaIdentidade() {
             )}
             {selectedTipo === 'cobranca' && (
               <Grid item xs={12} sm={6} md={4}>
-                <TextField fullWidth size="small" label="Nome do Profissional (min 7 chars)" value={filters.nome}
+                <TextField fullWidth size="small" label="Nome do Profissional" value={filters.nome}
                   onChange={e => setFilters(p => ({ ...p, nome: e.target.value }))}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()} />
               </Grid>
@@ -255,7 +256,7 @@ export default function ConsultaIdentidade() {
                 onClick={async () => {
                   setExporting(true);
                   try {
-                    const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: k }));
+                    const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: formatColumnLabel(k) }));
                     await exportService.exportGenericExcel({
                       data: resultados.map(r => ({ ...r })),
                       columns: cols,
@@ -278,16 +279,20 @@ export default function ConsultaIdentidade() {
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           ) : searched && (
             <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                <strong>{nomeConsulta}</strong> - {total} resultado(s)
-              </Typography>
+              {resultados.length === 0 ? (
+                <Alert severity="info" sx={{ mb: 2 }}>Identidade não cadastrada.</Alert>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <strong>{nomeConsulta}</strong> - {total} resultado(s)
+                </Typography>
+              )}
               {resultados.length > 0 && (
                 <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
                         {columns.map(col => (
-                          <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{col}</TableCell>
+                          <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatColumnLabel(col)}</TableCell>
                         ))}
                       </TableRow>
                     </TableHead>

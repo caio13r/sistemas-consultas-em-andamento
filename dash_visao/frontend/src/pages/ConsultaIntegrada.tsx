@@ -206,13 +206,13 @@ export default function ConsultaIntegrada() {
                   ? [
                       { key: 'nome', label: 'Nome' }, { key: 'cpf', label: 'CPF' },
                       { key: 'cro', label: 'CRO' }, { key: 'categoria', label: 'Categoria' },
-                      { key: 'inscricao', label: 'Inscricao' }, { key: 'tipo_inscricao', label: 'Tipo' },
-                      { key: 'situacao', label: 'Situacao' }, { key: 'situacao_financeira', label: 'Sit. Financeira' },
+                      { key: 'inscricao', label: 'Inscrição' }, { key: 'tipo_inscricao', label: 'Tipo' },
+                      { key: 'situacao', label: 'Situação' }, { key: 'situacao_financeira', label: 'Sit. Financeira' },
                     ]
                   : [
-                      { key: 'razao_social', label: 'Razao Social' }, { key: 'cnpj', label: 'CNPJ' },
-                      { key: 'cro', label: 'CRO' }, { key: 'inscricao', label: 'Inscricao' },
-                      { key: 'situacao', label: 'Situacao' }, { key: 'municipio', label: 'Municipio' },
+                      { key: 'razao_social', label: 'Razão Social' }, { key: 'cnpj', label: 'CNPJ' },
+                      { key: 'cro', label: 'CRO' }, { key: 'inscricao', label: 'Inscrição' },
+                      { key: 'situacao', label: 'Situação' }, { key: 'municipio', label: 'Município' },
                       { key: 'uf', label: 'UF' }, { key: 'telefone', label: 'Telefone' },
                     ];
                 await exportService.exportGenericExcel({

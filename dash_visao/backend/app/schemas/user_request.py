@@ -24,6 +24,7 @@ class UserRequestItemResponse(BaseModel):
 class UserRequestCreate(BaseModel):
     nome_completo: str
     email: EmailStr
+    senha: str
     telefone: Optional[str] = None
     origem_tipo: str  # "cfo" ou "cro"
     organizacao: str
@@ -77,7 +78,6 @@ class StatusCheckResponse(BaseModel):
 # --- Admin actions ---
 class UserRequestApprove(BaseModel):
     username: str
-    password: str
     role_ids: List[int] = []
     admin_notes: Optional[str] = None
 

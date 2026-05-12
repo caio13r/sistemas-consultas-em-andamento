@@ -9,6 +9,7 @@ Repositório que reúne dois sistemas principais: **dash_sistato** (auditoria co
 | [Containers e Serviços](./containers-servicos.md) | Como subir os containers, portas e status dos serviços |
 | [Dash Sistato](./dash_sistato.md) | Sistema de auditoria (FastAPI + React + PostgreSQL) |
 | [Sistema de Consultas](./sistema-consultas.md) | API de consultas em PHP com Redis |
+| [Administracao](./administracao.md) | Documentacao completa do sistema (tecnologias, bancos, arquitetura, permissoes) |
 
 ## Estrutura do repositório
 

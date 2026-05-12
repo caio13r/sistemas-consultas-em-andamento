@@ -62,7 +62,6 @@ const Header: React.FC<HeaderProps> = ({
     }
   }, [dropdownOpen]);
 
-  // Handlers para garantir navegação
   const handleProfile = () => {
     setDropdownOpen(false);
     navigate('/edit-profile');
@@ -75,23 +74,37 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <div className="w-full">
-      {/* Topbar */}
-      <div className="bg-system-wine text-white text-xs py-1 px-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <span><i className="fa fa-phone-alt mr-1"></i> (61) 3223-8800</span>
-          <span className="hidden sm:inline"><i className="fa fa-envelope mr-1"></i> contato@cfo.org.br</span>
+      {/* Topbar institucional */}
+      <div
+        className="text-white/90 text-xs py-1.5 px-4 flex justify-between items-center"
+        style={{ background: 'linear-gradient(90deg, #5C1519 0%, #7A1E26 100%)' }}
+      >
+        <div className="flex items-center gap-4 font-body">
+          <span className="tracking-wide">(61) 3223-8800</span>
+          <span className="hidden sm:inline tracking-wide">contato@cfo.org.br</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="hidden sm:inline"><i className="fa fa-map-marker-alt mr-1"></i> Brasília - DF</span>
-          <span className="hidden sm:inline"><i className="fa fa-question-circle mr-1"></i> Ajuda</span>
+        <div className="flex items-center gap-4 font-body">
+          <span className="hidden sm:inline tracking-wide">Brasilia - DF</span>
+          <span className="hidden sm:inline tracking-wide">Ajuda</span>
         </div>
       </div>
       {/* Main Header */}
-      <header className="bg-system-gray border-b border-gray-200 h-20 flex items-center justify-between shadow-sm px-2 sm:px-4">
+      <header
+        className="h-20 flex items-center justify-between px-2 sm:px-4"
+        style={{
+          backgroundColor: '#FBF8F4',
+          borderBottom: '1px solid rgba(122,30,38,0.1)',
+          boxShadow: '0 1px 3px rgba(122,30,38,0.04)',
+        }}
+      >
         {/* Esquerda */}
         <div className="flex items-center gap-2 min-w-[44px]">
-          <button onClick={onMenuClick} className="p-2 rounded-xl bg-white hover:bg-system-gray-dark transition hover:shadow-sm">
-            <Menu className="h-5 w-5 text-gray-700" />
+          <button
+            onClick={onMenuClick}
+            className="p-2 rounded-xl bg-white hover:bg-cream-100 transition hover:shadow-sm"
+            style={{ border: '1px solid rgba(122,30,38,0.08)' }}
+          >
+            <Menu className="h-5 w-5" style={{ color: '#3D0E10' }} />
           </button>
         </div>
         {/* Centro */}
@@ -100,46 +113,59 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         {/* Direita */}
         <div className="flex items-center gap-2 min-w-[140px] justify-end">
-          <button className="p-2 rounded-xl bg-white hover:bg-system-gray-dark transition hover:shadow-sm">
-            <Bell className="h-5 w-5 text-gray-700" />
+          <button
+            className="p-2 rounded-xl bg-white hover:bg-cream-100 transition hover:shadow-sm"
+            style={{ border: '1px solid rgba(122,30,38,0.08)' }}
+          >
+            <Bell className="h-5 w-5" style={{ color: '#5C1519' }} />
           </button>
-          <button className="p-2 rounded-xl bg-white hover:bg-system-gray-dark transition hover:shadow-sm">
-            <Settings className="h-5 w-5 text-gray-700" />
+          <button
+            className="p-2 rounded-xl bg-white hover:bg-cream-100 transition hover:shadow-sm"
+            style={{ border: '1px solid rgba(122,30,38,0.08)' }}
+          >
+            <Settings className="h-5 w-5" style={{ color: '#5C1519' }} />
           </button>
           {/* User Dropdown */}
           <button
             ref={buttonRef}
-            className="flex items-center gap-2 p-2 rounded-xl bg-white hover:bg-system-gray-dark transition hover:shadow-sm"
+            className="flex items-center gap-2 p-2 rounded-xl bg-white hover:bg-cream-100 transition hover:shadow-sm"
+            style={{ border: '1px solid rgba(122,30,38,0.08)' }}
             onClick={() => setDropdownOpen((v) => !v)}
           >
-            <User className="h-5 w-5 text-gray-700" />
-            <span className="text-sm font-medium text-gray-700">{userName}</span>
+            <User className="h-5 w-5" style={{ color: '#5C1519' }} />
+            <span className="text-sm font-medium" style={{ color: '#0A0506' }}>{userName}</span>
           </button>
           {dropdownOpen && ReactDOM.createPortal(
             <div
               ref={menuRef}
-              className="bg-white rounded-xl shadow-lg border border-gray-100 z-[99999] overflow-hidden"
-              style={menuStyles}
+              className="bg-white rounded-xl shadow-lg overflow-hidden"
+              style={{ ...menuStyles, border: '1px solid rgba(122,30,38,0.1)' }}
             >
-              <div className="p-2 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-800 truncate">{userName}</p>
-                <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+              <div className="p-2" style={{ borderBottom: '1px solid rgba(122,30,38,0.08)' }}>
+                <p className="text-sm font-semibold truncate" style={{ color: '#0A0506' }}>{userName}</p>
+                <p className="text-xs truncate" style={{ color: 'rgba(20,10,12,0.5)' }}>{userEmail}</p>
               </div>
               <ul className="py-1">
                 <li>
                   <button
                     onClick={handleProfile}
-                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center px-4 py-2 text-sm transition-colors"
+                    style={{ color: '#0A0506' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F5EDE0'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <User className="w-4 h-4 mr-2 text-gray-500" /> Meu Perfil
+                    <User className="w-4 h-4 mr-2" style={{ color: '#6D6E71' }} /> Meu Perfil
                   </button>
                 </li>
                 <li>
                   <button
                     onClick={handleLogoutClick}
-                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center px-4 py-2 text-sm transition-colors"
+                    style={{ color: '#C8393F' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(200,57,63,0.06)'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <i className="fa fa-sign-out-alt w-4 h-4 mr-2" /> Sair
+                    <User className="w-4 h-4 mr-2" /> Sair
                   </button>
                 </li>
               </ul>
@@ -152,4 +178,4 @@ const Header: React.FC<HeaderProps> = ({
   );
 };
 
-export default Header; 
+export default Header;

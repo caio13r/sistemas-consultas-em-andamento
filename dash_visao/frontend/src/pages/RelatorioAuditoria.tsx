@@ -21,7 +21,7 @@ const getSeverity = (qty: number) => {
   if (qty < 0) return { color: '#9E9E9E', label: 'Erro' };
   if (qty === 0) return { color: '#2E7D32', label: 'OK' };
   if (qty <= 10) return { color: '#2E7D32', label: 'Baixo' };
-  if (qty <= 100) return { color: '#E65100', label: 'Medio' };
+  if (qty <= 100) return { color: '#E65100', label: 'Médio' };
   return { color: '#C62828', label: 'Alto' };
 };
 
@@ -46,7 +46,7 @@ export default function RelatorioAuditoria() {
       setResultados(res.data.resultados || []);
       setCroLabel(res.data.cro || 'TODOS');
     } catch (e: any) {
-      setSnackbar({ open: true, message: e.response?.data?.detail || 'Erro ao gerar relatorio', severity: 'error' });
+      setSnackbar({ open: true, message: e.response?.data?.detail || 'Erro ao gerar relatório', severity: 'error' });
     } finally { setLoading(false); }
   };
 
@@ -60,12 +60,12 @@ export default function RelatorioAuditoria() {
     try {
       const cols = [
         { key: 'tipo', label: 'Tipo de Auditoria' },
-        { key: 'quantidade', label: 'Inconsistencias' },
+        { key: 'quantidade', label: 'Inconsistências' },
       ];
       await exportService.exportGenericExcel({
         data: resultados.map(r => ({ ...r })),
         columns: cols,
-        title: `Relatorio de Auditoria - ${croLabel}`,
+        title: `Relatório de Auditoria - ${croLabel}`,
         filename: `relatorio_auditoria_${croLabel}`,
       });
       setSnackbar({ open: true, message: 'Excel exportado com sucesso!', severity: 'success' });
@@ -81,9 +81,9 @@ export default function RelatorioAuditoria() {
     <PageContainer>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h5">Relatorio de Auditoria</Typography>
+        <Typography variant="h5">Relatório de Auditoria</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Panorama consolidado de inconsistencias cadastrais por tipo de auditoria.
+          Panorama consolidado de inconsistências cadastrais por tipo de auditoria.
         </Typography>
       </Box>
 
@@ -137,7 +137,7 @@ export default function RelatorioAuditoria() {
               />
               {totalRow && (
                 <Chip
-                  label={`${totalRow.quantidade.toLocaleString('pt-BR')} inconsistencias`}
+                  label={`${totalRow.quantidade.toLocaleString('pt-BR')} inconsistências`}
                   size="small"
                   sx={{
                     fontWeight: 700,
@@ -166,7 +166,7 @@ export default function RelatorioAuditoria() {
                       <TableCell sx={{ width: 50 }}>#</TableCell>
                       <TableCell>Tipo de Auditoria</TableCell>
                       <TableCell align="center" sx={{ width: 100 }}>Severidade</TableCell>
-                      <TableCell align="right" sx={{ width: 140 }}>Inconsistencias</TableCell>
+                      <TableCell align="right" sx={{ width: 140 }}>Inconsistências</TableCell>
                       <TableCell align="center" sx={{ width: 80 }}>Detalhe</TableCell>
                     </TableRow>
                   </TableHead>

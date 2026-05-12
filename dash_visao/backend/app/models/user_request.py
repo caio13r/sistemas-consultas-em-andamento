@@ -17,6 +17,7 @@ class UserRequest(Base):
     justificativa = Column(Text, nullable=False)
     outro = Column(Text, nullable=True)
     sugestao_desenvolvimento = Column(Text, nullable=True)
+    hashed_password = Column(String(255), nullable=True)
 
     # Workflow
     status = Column(String(20), default="pendente", nullable=False, index=True)

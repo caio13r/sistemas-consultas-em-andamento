@@ -7,9 +7,9 @@ from .routers import (
     user_permissions, consulta_integrada, servicos,
     consulta_identidade, tabelas_centralizadas, consulta_rfb,
     consulta_fiscalizacao, consulta_auditorias, consulta_estatistica,
-    consulta_prescricao, eleicoes, dados_abertos, user_requests,
+    consulta_prescricao, eleicoes, user_requests,
     activity_logs, export, dashboard, relatorios, cracha, lai,
-    documentos,
+    documentos, monitor_config, backup_config, contatos_fiscalizacao, sso,
 )
 from .init_db import init_db
 from .init_menus import init_menus_data
@@ -98,7 +98,6 @@ app.include_router(consulta_auditorias.router, prefix="/api", tags=["consulta-au
 app.include_router(consulta_estatistica.router, prefix="/api", tags=["consulta-estatistica"])
 app.include_router(consulta_prescricao.router, prefix="/api", tags=["consulta-prescricao"])
 app.include_router(eleicoes.router, prefix="/api", tags=["eleicoes-regionais"])
-app.include_router(dados_abertos.router, prefix="/api", tags=["dados-abertos"])
 app.include_router(user_requests.router, prefix="/api", tags=["user-requests"])
 app.include_router(activity_logs.router, prefix="/api", tags=["activity-logs"])
 app.include_router(export.router, prefix="/api", tags=["export"])
@@ -107,6 +106,10 @@ app.include_router(relatorios.router, prefix="/api", tags=["relatorios"])
 app.include_router(cracha.router, prefix="/api", tags=["cracha"])
 app.include_router(lai.router, prefix="/api", tags=["lai"])
 app.include_router(documentos.router, prefix="/api", tags=["documentos"])
+app.include_router(monitor_config.router, prefix="/api", tags=["monitor-config"])
+app.include_router(backup_config.router, prefix="/api", tags=["backup-config"])
+app.include_router(contatos_fiscalizacao.router, prefix="/api", tags=["contatos-fiscalizacao"])
+app.include_router(sso.router, prefix="/api", tags=["sso"])
 
 @app.get("/")
 def read_root():

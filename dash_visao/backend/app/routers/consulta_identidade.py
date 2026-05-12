@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from ..database import get_db1, get_db3
+from ..database import get_db1, get_db3, fix_row_encoding
 from ..models import User
 from ..core.auth import check_permission
 from pydantic import BaseModel
@@ -35,9 +35,9 @@ class IdentidadeResponse(BaseModel):
 
 
 def _fmt_date_api(date_str: str, time: str = "00:00:00") -> str:
-    """Converte YYYY-MM-DD para dd/m/Y H:i:s (formato da API)."""
+    """Converte YYYY-MM-DD para dd/mm/yyyy HH:MM:SS (formato da API)."""
     d = datetime.strptime(date_str, "%Y-%m-%d")
-    return f"{d.day:02d}/{d.month}/{d.year} {time}"
+    return f"{d.day:02d}/{d.month:02d}/{d.year} {time}"
 
 
 def _call_api(path: str, params: dict, list_key: str = "list") -> list:
@@ -46,7 +46,24 @@ def _call_api(path: str, params: dict, list_key: str = "list") -> list:
     url = f"{API_IDENTIDADE_URL}{path}"
     try:
         resp = requests.get(url, params=params, timeout=60)
-        resp.raise_for_status()
+        if resp.status_code not in (200, 201):
+            raw = resp.text[:500]
+            logger.warning(f"API Identidade {resp.status_code} em {path}: {raw}")
+            try:
+                body = resp.json()
+            except Exception:
+                body = None
+            if isinstance(body, list) and len(body) > 0:
+                return body
+            if isinstance(body, dict):
+                extracted = body.get(list_key, body.get("data", body.get("resultados", [])))
+                if isinstance(extracted, list) and len(extracted) > 0:
+                    return extracted
+                if body.get("identidade") or body.get("message"):
+                    return []
+            if resp.status_code == 401:
+                raise HTTPException(status_code=403, detail="Token sem permissão para este recurso na API de Identidade. Contacte o administrador da API.")
+            raise HTTPException(status_code=502, detail=f"Erro na API de Identidade ({resp.status_code}): {raw[:200]}")
         data = resp.json()
         if isinstance(data, list):
             return data
@@ -70,32 +87,32 @@ IDENT_TYPES = {
     # --- Grupo 2: API Externa (192.168.161.165:8082) ---
     "descartadas": {
         "nome": "Identidades Descartadas",
-        "grupo": "CFO ID",
+        "grupo": "Identidade Policarbonato",
         "api_path": "/api/consulta/descartada",
         "params": ["periodo", "uf"],
     },
     "postagem-estatistica": {
         "nome": "Estatísticas de Postagem",
-        "grupo": "CFO ID",
+        "grupo": "Identidade Policarbonato",
         "api_path": "/api/consulta/postagem/estatistica/total",
         "list_key": "estatistico",
         "params": ["periodo"],
     },
     "postagem-detalhada": {
         "nome": "Postagens Detalhadas",
-        "grupo": "CFO ID",
+        "grupo": "Identidade Policarbonato",
         "api_path": "/api/consulta/postagem/identidade",
         "params": ["periodo", "uf"],
     },
     "perdidas": {
         "nome": "Identidades Perdidas",
-        "grupo": "CFO ID",
+        "grupo": "Identidade Policarbonato",
         "api_path": "/api/consulta/perda",
         "params": ["periodo", "uf"],
     },
     "retornadas": {
         "nome": "Identidades Retornadas",
-        "grupo": "CFO ID",
+        "grupo": "Identidade Policarbonato",
         "api_path": "/api/consulta/retornada",
         "params": ["periodo", "uf"],
     },
@@ -131,7 +148,7 @@ IDENT_TYPES = {
     },
     "estatisticas-producao": {
         "nome": "Estatísticas Produção/Postagem/Entrega",
-        "grupo": "CFO ID",
+        "grupo": "Identidade Policarbonato",
         "endpoint": "custom_producao",
     },
     "evolucao-emissao": {
@@ -181,7 +198,7 @@ def buscar_identidade(
     termino: Optional[str] = Query(None, description="Data término YYYY-MM-DD"),
     ano: Optional[str] = Query(None),
     mes: Optional[str] = Query(None),
-    nome: Optional[str] = Query(None, description="Nome do profissional (min 7 chars)"),
+    nome: Optional[str] = Query(None, description="Nome do profissional"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, le=1000000),
     db3: Session = Depends(get_db3),
@@ -206,34 +223,59 @@ def buscar_identidade(
         if tipo_busca not in endpoint_map:
             raise HTTPException(status_code=400, detail="tipo_busca deve ser: nome, cpf ou ar")
         try:
+            # Cada endpoint espera um parâmetro de busca diferente
+            param_map = {"nome": "name", "cpf": "cpf", "ar": "ar"}
+            search_key = param_map.get(tipo_busca, "searchValue")
+            api_params: dict = {search_key: valor.strip(), "page_number": page, "page_amount": page_size}
+            if API_IDENTIDADE_TOKEN:
+                api_params["token"] = API_IDENTIDADE_TOKEN
             resp = requests.get(
                 endpoint_map[tipo_busca],
-                params={"searchValue": valor, "page_number": page, "page_amount": page_size},
+                params=api_params,
                 timeout=30,
             )
-            resp.raise_for_status()
+            if resp.status_code not in (200, 201):
+                raw = resp.text[:500]
+                logger.warning(f"API Identidade {resp.status_code} para '{valor}': {raw}")
+                try:
+                    body = resp.json()
+                except Exception:
+                    body = None
+                # Algumas APIs retornam dados mesmo com status != 200
+                if isinstance(body, list) and len(body) > 0:
+                    return IdentidadeResponse(total=len(body), tipo=tipo, nome=ident["nome"], resultados=body)
+                if isinstance(body, dict):
+                    extracted = body.get("data", body.get("resultados", body.get("list", [])))
+                    if isinstance(extracted, list) and len(extracted) > 0:
+                        return IdentidadeResponse(total=len(extracted), tipo=tipo, nome=ident["nome"], resultados=extracted)
+                    # "Nenhuma identidade cadastrada" — retorna vazio
+                    if body.get("identidade") or body.get("message"):
+                        return IdentidadeResponse(total=0, tipo=tipo, nome=ident["nome"], resultados=[])
+                # Erro real — repassa
+                resp.raise_for_status()
             data = resp.json()
             resultados = data if isinstance(data, list) else data.get("data", data.get("resultados", []))
         except requests.exceptions.ConnectionError:
             raise HTTPException(status_code=503, detail="API de Identidade indisponível.")
         except requests.exceptions.Timeout:
             raise HTTPException(status_code=504, detail="Timeout ao consultar API de Identidade.")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"API Identidade erro {resp.status_code}: {resp.text[:300]}")
+            raise HTTPException(status_code=502, detail=f"Erro na API de Identidade ({resp.status_code}).")
         return IdentidadeResponse(
             total=len(resultados), tipo=tipo, nome=ident["nome"], resultados=resultados,
         )
 
     # --- Estatísticas produção/postagem/entrega (query complexa DB3) ---
     if ident.get("endpoint") == "custom_producao":
-        conditions = []
         params = {}
+        cro_where = ""
         if cro:
-            conditions.append("T.CRO = :cro")
+            cro_where = "WHERE CRO = :cro"
             params["cro"] = cro.upper()
-        cro_where = " AND ".join(conditions) if conditions else "1=1"
 
         sql = text(f"""
-            SELECT
-                TD.CFO_ID, YY.PRODUZIDAS,
+            SELECT TD.CFO_ID, YY.PRODUZIDAS,
                 IIF(TD.CFO_ID = 0, 0, ((YY.PRODUZIDAS*100)/TD.CFO_ID)) as PERC_PROD,
                 KK.POSTADAS,
                 IIF(TD.CFO_ID = 0, 0, ((KK.POSTADAS*100)/TD.CFO_ID)) as PERC_POST,
@@ -244,33 +286,20 @@ def buscar_identidade(
                 (KK.POSTADAS - WW.ENTREGUES - QQ.DEVOLVIDAS) AS EM_TRANSITO,
                 IIF(TD.CFO_ID = 0, 0, (((KK.POSTADAS - WW.ENTREGUES - QQ.DEVOLVIDAS)*100)/TD.CFO_ID)) as PERC_TRAM
             FROM (
-                SELECT COUNT(DISTINCT T.INSC) AS CFO_ID
-                FROM CFO_CWS.dbo.cfo_id_cobranca T WHERE {cro_where}
-            ) TD
-            CROSS JOIN (
-                SELECT ISNULL(COUNT(*), 0) AS PRODUZIDAS
-                FROM CFO_CWS.dbo.Identidade_coleta IC
-                WHERE IC.ID_COLETA IS NOT NULL
-            ) YY
-            CROSS JOIN (
-                SELECT ISNULL(COUNT(DISTINCT CP.INSCRICAO), 0) AS POSTADAS
-                FROM CFO_CWS.dbo.Carga_postagem_ECT CP
-                WHERE CP.EVENTO = 'Postado'
-            ) KK
-            CROSS JOIN (
-                SELECT ISNULL(COUNT(DISTINCT CP.INSCRICAO), 0) AS ENTREGUES
-                FROM CFO_CWS.dbo.Carga_postagem_ECT CP
-                WHERE CP.EVENTO IN ('Entregue', 'Distribuído ao remetente')
-                AND CP.EVENTO = 'Entregue'
-            ) WW
-            CROSS JOIN (
-                SELECT ISNULL(COUNT(DISTINCT CP.INSCRICAO), 0) AS DEVOLVIDAS
-                FROM CFO_CWS.dbo.Carga_postagem_ECT CP
-                WHERE CP.EVENTO = 'Distribuído ao remetente'
-            ) QQ
+                SELECT COUNT(*) AS CFO_ID FROM (
+                    SELECT DISTINCT CRO, CATEGORIA, INSC, PROFISSIONAL, MIN(data_emissao_id) AS DT_EMISSAO_CFOID
+                    FROM CFO_CWS.dbo.cfo_id_cobranca
+                    {cro_where}
+                    GROUP BY CRO, CATEGORIA, INSC, PROFISSIONAL
+                ) AS tt
+            ) AS TD,
+            (SELECT COUNT(*) AS PRODUZIDAS FROM CFO_CWS.dbo.Identidade_coleta {cro_where}) AS YY,
+            (SELECT COUNT(*) AS POSTADAS FROM CFO_CWS.dbo.Carga_postagem_ECT WHERE EVENTO = 'Postado' AND AR IN (SELECT AR FROM CFO_CWS.dbo.Identidade_coleta {cro_where})) AS KK,
+            (SELECT COUNT(*) AS ENTREGUES FROM CFO_CWS.dbo.Carga_postagem_ECT WHERE EVENTO = 'Entregue' AND AR IN (SELECT AR FROM CFO_CWS.dbo.Identidade_coleta {cro_where})) AS WW,
+            (SELECT COUNT(*) AS DEVOLVIDAS FROM CFO_CWS.dbo.Carga_postagem_ECT WHERE EVENTO = 'Distribuído ao remetente' AND AR IN (SELECT AR FROM CFO_CWS.dbo.Identidade_coleta {cro_where})) AS QQ
         """)
         rows = db3.execute(sql, params).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return IdentidadeResponse(
             total=len(resultados), tipo=tipo, nome=ident["nome"], resultados=resultados,
         )
@@ -303,7 +332,7 @@ def buscar_identidade(
     # --- Carteirinhas por período (DB1) ---
     if ident.get("endpoint") == "custom_carteirinhas_periodo":
         if not inicio or not termino:
-            raise HTTPException(status_code=400, detail="Parâmetros 'inicio' e 'termino' são obrigatórios.")
+            raise HTTPException(status_code=400, detail="Parâmetros 'início' e 'término' são obrigatórios.")
         conditions = ["data_despacho BETWEEN :inicio AND :termino"]
         params = {"inicio": inicio, "termino": termino}
         if cro:
@@ -330,7 +359,7 @@ def buscar_identidade(
             ORDER BY cro_uf
         """)
         rows = db1.execute(sql).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return IdentidadeResponse(
             total=len(resultados), tipo=tipo, nome=ident["nome"], resultados=resultados,
         )
@@ -372,7 +401,7 @@ def buscar_identidade(
         if mes:
             conditions.append("MES = :mes")
             params["mes"] = mes
-        if nome and len(nome) >= 7:
+        if nome and len(nome.strip()) >= 3:
             conditions.append("PROFISSIONAL COLLATE Latin1_general_CI_AI LIKE :nome")
             params["nome"] = f"%{nome}%"
 
@@ -388,7 +417,7 @@ def buscar_identidade(
             ORDER BY {ident['order']}
         """)
         rows = db3.execute(sql, params).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return IdentidadeResponse(
             total=len(resultados), tipo=tipo, nome=ident["nome"], resultados=resultados,
         )

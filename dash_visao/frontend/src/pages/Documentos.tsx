@@ -114,7 +114,7 @@ const Documentos: React.FC = () => {
           <Grid item xs={12} md={4}>
             <Card>
               <CardActionArea onClick={() => navigate('/documentos/upload')} sx={{ p: 3, textAlign: 'center' }}>
-                <UploadIcon sx={{ fontSize: 56, color: '#8D0F12', mb: 1 }} />
+                <UploadIcon sx={{ fontSize: 56, color: '#7A1E26', mb: 1 }} />
                 <CardContent>
                   <Typography variant="h6" gutterBottom>Upload</Typography>
                   <Typography variant="body2" color="text.secondary">

@@ -36,6 +36,7 @@ import {
   BarChart as BarChartIcon,
   MedicalServices as MedicalServicesIcon,
   AccountBalance as AccountBalanceIcon,
+  Balance as BalanceIcon,
   Public as PublicIcon,
   TableChart as TableChartIcon,
   HowToVote as HowToVoteIcon,
@@ -43,6 +44,7 @@ import {
   ViewList as ViewListIcon,
   SupervisorAccount as SupervisorAccountIcon,
   Add as AddIcon,
+  Storage as StorageIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -122,6 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, collapsed, onToggleCol
       'BarChart': <BarChartIcon />,
       'MedicalServices': <MedicalServicesIcon />,
       'AccountBalance': <AccountBalanceIcon />,
+      'Balance': <BalanceIcon />,
       'Public': <PublicIcon />,
       'TableChart': <TableChartIcon />,
       'Assessment': <AssessmentIcon />,
@@ -137,6 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, collapsed, onToggleCol
       'SupervisorAccount': <SupervisorAccountIcon />,
       'HowToReg': <HowToRegIcon />,
       'Add': <AddIcon />,
+      'Storage': <StorageIcon />,
     };
     return iconMap[iconName || ''] || <ListIcon />;
   };
@@ -336,7 +340,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, collapsed, onToggleCol
       sx={{
         width: collapsed ? 72 : SIDEBAR_WIDTH,
         height: '100vh',
-        backgroundColor: '#8D0F12',
+        background: 'linear-gradient(180deg, #5C1519 0%, #7A1E26 50%, #9A2832 100%)',
         color: 'white',
         display: 'flex',
         flexDirection: 'column',
@@ -373,14 +377,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, collapsed, onToggleCol
         )}
       </List>
 
-      {/* Footer */}
-      {!collapsed && (
-        <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
-          <Typography variant="caption" sx={{ opacity: 0.5, fontSize: '0.65rem' }}>
-            Sistema Consultas CFO
-          </Typography>
-        </Box>
-      )}
     </Box>
   );
 
@@ -395,7 +391,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, collapsed, onToggleCol
         sx={{
           '& .MuiDrawer-paper': {
             width: SIDEBAR_WIDTH,
-            backgroundColor: '#8D0F12',
+            background: 'linear-gradient(180deg, #5C1519 0%, #7A1E26 50%, #9A2832 100%)',
             color: 'white',
           },
         }}
@@ -412,7 +408,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, collapsed, onToggleCol
         width: collapsed ? 72 : SIDEBAR_WIDTH,
         flexShrink: 0,
         height: '100vh',
-        backgroundColor: '#8D0F12',
+        background: 'linear-gradient(180deg, #5C1519 0%, #7A1E26 50%, #9A2832 100%)',
         color: 'white',
         position: 'fixed',
         left: 0,

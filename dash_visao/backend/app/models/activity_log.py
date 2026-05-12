@@ -16,4 +16,5 @@ class ActivityLog(Base):
     user_agent = Column(String(500), nullable=True)
     query_params = Column(Text, nullable=True)
     duration_ms = Column(Integer, nullable=True)
+    error_detail = Column(Text, nullable=True)  # Mensagem de erro para respostas 4xx/5xx
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

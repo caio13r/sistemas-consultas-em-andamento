@@ -96,15 +96,6 @@ MENUS_DATA = [
         "submenus": [],
     },
     {
-        "name": "Dados Abertos",
-        "url": "/dados-abertos",
-        "icon": "Public",
-        "description": "Disponibilização de dados abertos e transparência",
-        "order": 9,
-        "permission_name": "view_dados_abertos",
-        "submenus": [],
-    },
-    {
         "name": "Tabelas Centralizadas",
         "url": "/tabelas-centralizadas",
         "icon": "TableChart",
@@ -150,7 +141,7 @@ MENUS_DATA = [
         "url": "/documentos",
         "icon": "Folder",
         "description": "Gestão de documentos",
-        "order": 14,
+        "order": 15,
         "permission_name": None,
         "submenus": [],
     },
@@ -160,7 +151,7 @@ MENUS_DATA = [
         "url": None,
         "icon": "AdminPanelSettings",
         "description": "Painel administrativo do sistema",
-        "order": 15,
+        "order": 16,
         "is_section": True,
         "permission_name": None,
         "submenus": [
@@ -174,9 +165,56 @@ MENUS_DATA = [
             {"name": "Catálogo de Serviços", "url": "/servicos", "icon": "Folder", "order": 7, "permission_name": None},
             {"name": "Log de Alterações", "url": "/log-alteracoes", "icon": "Assignment", "order": 8, "permission_name": "manage_users"},
             {"name": "Log de Atividades", "url": "/log-atividades", "icon": "ViewList", "order": 9, "permission_name": "manage_users"},
+            {"name": "Documentacao", "url": "/documentacao", "icon": "Assignment", "order": 10, "permission_name": "manage_users"},
+            {"name": "Backup", "url": "/backup-config", "icon": "Storage", "order": 11, "permission_name": "manage_users"},
         ],
     },
 ]
+
+
+_NEW_MENUS = []
+
+
+def _ensure_new_menus(db):
+    """Insere ou atualiza menus novos em bases já populadas (idempotente)"""
+    for menu_data in _NEW_MENUS:
+        exists = db.query(Menu).filter(Menu.url == menu_data["url"]).first()
+        if not exists:
+            db_menu = Menu(**menu_data)
+            db.add(db_menu)
+        else:
+            for key, val in menu_data.items():
+                setattr(exists, key, val)
+    db.commit()
+
+
+def _sync_submenus(db):
+    """Sincroniza submenus existentes com MENUS_DATA (corrige nomes, URLs, ordem)."""
+    for menu_data in MENUS_DATA:
+        submenus_data = menu_data.get("submenus", [])
+        if not submenus_data:
+            continue
+        parent = db.query(Menu).filter(Menu.name == menu_data["name"]).first()
+        if not parent:
+            continue
+        existing_subs = db.query(SubMenu).filter(SubMenu.menu_id == parent.id).all()
+        existing_by_order = {s.order: s for s in existing_subs}
+        for sub_data in submenus_data:
+            order = sub_data["order"]
+            if order in existing_by_order:
+                sub = existing_by_order[order]
+                changed = False
+                for key in ("name", "url", "icon", "permission_name"):
+                    if key in sub_data and getattr(sub, key, None) != sub_data[key]:
+                        setattr(sub, key, sub_data[key])
+                        changed = True
+                if changed:
+                    print(f"  Submenu atualizado: {sub.name} -> {sub_data['name']} ({sub_data['url']})")
+            else:
+                new_sub = SubMenu(menu_id=parent.id, **sub_data)
+                db.add(new_sub)
+                print(f"  Submenu criado: {sub_data['name']} ({sub_data['url']})")
+    db.commit()
 
 
 def init_menus_data():
@@ -185,7 +223,11 @@ def init_menus_data():
     try:
         existing_count = db.query(Menu).count()
         if existing_count > 0:
-            print(f"Menus já existem ({existing_count} encontrados). Pulando inicialização.")
+            # Inserir menus novos que ainda não existem (idempotente)
+            _ensure_new_menus(db)
+            # Sincronizar submenus existentes com definição atual
+            _sync_submenus(db)
+            print(f"Menus já existem ({existing_count} encontrados). Verificação de novos menus/submenus concluída.")
             return
 
         for menu_data in MENUS_DATA:

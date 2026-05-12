@@ -10,7 +10,8 @@ const PageContainer: React.FC<React.PropsWithChildren> = ({ children }) => (
         mt: 0,
         boxSizing: 'border-box',
         minHeight: 'calc(100vh - 80px)',
-        border: '1px solid rgba(0,0,0,0.06)',
+        border: '1px solid rgba(122,30,38,0.06)',
+        bgcolor: '#fff',
       }}
       elevation={0}
     >

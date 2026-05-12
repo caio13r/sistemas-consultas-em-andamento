@@ -15,6 +15,7 @@ import {
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const UF_LIST = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
@@ -30,26 +31,26 @@ interface RelatorioConfig {
 
 const RELATORIOS: RelatorioConfig[] = [
   {
-    id: 'arrecadacao_bb', nome: 'Arrecadacao Banco do Brasil',
-    descricao: 'Arrecadacao por convenio e CRO com totais de tarifas e valores.',
+    id: 'arrecadacao_bb', nome: 'Arrecadação Banco do Brasil',
+    descricao: 'Arrecadação por convênio e CRO com totais de tarifas e valores.',
     endpoint: '/relatorios/arrecadacao-bb', icon: <BankIcon />, color: '#1565C0',
     filtros: ['periodo'],
   },
   {
     id: 'tarifas_bb', nome: 'Tarifas Banco do Brasil',
-    descricao: 'Tarifas bancarias (registro, liquidacao, baixa) por convenio e CRO.',
+    descricao: 'Tarifas bancárias (registro, liquidação, baixa) por convênio e CRO.',
     endpoint: '/relatorios/tarifas-bb', icon: <ReceiptIcon />, color: '#AD1457',
     filtros: ['periodo'],
   },
   {
     id: 'pagamentos_diversos', nome: 'Pagamentos Diversos',
-    descricao: 'Pagamentos por forma de pagamento (PIX, boleto, cartao) e CRO.',
+    descricao: 'Pagamentos por forma de pagamento (PIX, boleto, cartão) e CRO.',
     endpoint: '/relatorios/pagamentos-diversos', icon: <MoneyIcon />, color: '#2E7D32',
     filtros: ['periodo'],
   },
   {
-    id: 'arrecadacao_selfpay', nome: 'Arrecadacao SelfPay / BkBank',
-    descricao: 'Arrecadacao com split federal, tarifa de cartao e valor liquido por CRO.',
+    id: 'arrecadacao_selfpay', nome: 'Arrecadação SelfPay / BkBank',
+    descricao: 'Arrecadação com split federal, tarifa de cartão e valor líquido por CRO.',
     endpoint: '/relatorios/arrecadacao-selfpay', icon: <CardIcon />, color: '#E65100',
     filtros: ['periodo'],
   },
@@ -103,7 +104,7 @@ export default function RelatorioFinanceiro() {
     if (!selected) return;
     const f = selected.filtros;
     if (f.includes('periodo') && (!filters.inicio || !filters.termino)) {
-      setSnackbar({ open: true, message: 'Informe o periodo (inicio e termino).', severity: 'warning' }); return;
+      setSnackbar({ open: true, message: 'Informe o período (início e término).', severity: 'warning' }); return;
     }
     if (f.includes('uf_obrigatorio') && !filters.uf) {
       setSnackbar({ open: true, message: 'Selecione uma UF.', severity: 'warning' }); return;
@@ -123,7 +124,7 @@ export default function RelatorioFinanceiro() {
       const data = Array.isArray(res.data) ? res.data : (res.data.resultados || []);
       setResultados(data);
     } catch (e: any) {
-      setSnackbar({ open: true, message: e.response?.data?.detail || 'Erro ao gerar relatorio', severity: 'error' });
+      setSnackbar({ open: true, message: e.response?.data?.detail || 'Erro ao gerar relatório', severity: 'error' });
     } finally { setLoading(false); }
   };
 
@@ -136,7 +137,7 @@ export default function RelatorioFinanceiro() {
     if (!selected || resultados.length === 0) return;
     setExporting(true);
     try {
-      const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: k }));
+      const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: formatColumnLabel(k) }));
       await exportService.exportGenericExcel({
         data: resultados.map(r => ({ ...r })),
         columns: cols,
@@ -149,6 +150,21 @@ export default function RelatorioFinanceiro() {
     } finally { setExporting(false); }
   };
 
+  const handleExportPdf = async () => {
+    if (!selected || resultados.length === 0) return;
+    setExporting(true);
+    try {
+      await exportService.exportGenericPdf({
+        data: resultados.map(r => ({ ...r })),
+        title: selected.nome,
+        filename: `financeiro_${selected.id}`,
+      });
+      setSnackbar({ open: true, message: 'PDF exportado com sucesso!', severity: 'success' });
+    } catch {
+      setSnackbar({ open: true, message: 'Erro ao exportar PDF', severity: 'error' });
+    } finally { setExporting(false); }
+  };
+
   const columns = resultados.length > 0 ? Object.keys(resultados[0]) : [];
 
   // Card selection
@@ -156,9 +172,9 @@ export default function RelatorioFinanceiro() {
     return (
       <PageContainer>
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h5">Relatorios Financeiros</Typography>
+          <Typography variant="h5">Relatórios Financeiros</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Selecione o relatorio financeiro que deseja gerar.
+            Selecione o relatório financeiro que deseja gerar.
           </Typography>
         </Box>
 
@@ -224,12 +240,12 @@ export default function RelatorioFinanceiro() {
           {selected.filtros.includes('periodo') && (
             <>
               <Grid item xs={6} sm={3} md={2}>
-                <TextField fullWidth size="small" label="Data Inicio" type="date" value={filters.inicio}
+                <TextField fullWidth size="small" label="Data Início" type="date" value={filters.inicio}
                   onChange={e => setFilters(p => ({ ...p, inicio: e.target.value }))}
                   InputLabelProps={{ shrink: true }} />
               </Grid>
               <Grid item xs={6} sm={3} md={2}>
-                <TextField fullWidth size="small" label="Data Termino" type="date" value={filters.termino}
+                <TextField fullWidth size="small" label="Data Término" type="date" value={filters.termino}
                   onChange={e => setFilters(p => ({ ...p, termino: e.target.value }))}
                   InputLabelProps={{ shrink: true }} />
               </Grid>
@@ -284,10 +300,16 @@ export default function RelatorioFinanceiro() {
               />
             </Box>
             {resultados.length > 0 && (
-              <Button variant="outlined" color="success" size="small" startIcon={<DownloadIcon />}
-                disabled={exporting} onClick={handleExport}>
-                {exporting ? 'Exportando...' : 'Excel'}
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button variant="outlined" color="success" size="small" startIcon={<DownloadIcon />}
+                  disabled={exporting} onClick={handleExport}>
+                  {exporting ? 'Exportando...' : 'Excel'}
+                </Button>
+                <Button variant="outlined" color="error" size="small" startIcon={<DownloadIcon />}
+                  disabled={exporting} onClick={handleExportPdf}>
+                  PDF
+                </Button>
+              </Box>
             )}
           </Box>
 
@@ -300,7 +322,7 @@ export default function RelatorioFinanceiro() {
                       {columns.map(col => (
                         <TableCell key={col} align={CURRENCY_COLS.includes(col) ? 'right' : undefined}
                           sx={{ whiteSpace: 'nowrap' }}>
-                          {col.replace(/_/g, ' ')}
+                          {formatColumnLabel(col)}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -322,7 +344,7 @@ export default function RelatorioFinanceiro() {
             </Paper>
           ) : (
             <Paper variant="outlined" sx={{ p: 6, textAlign: 'center' }}>
-              <Typography color="text.secondary">Nenhum resultado encontrado para o periodo informado.</Typography>
+              <Typography color="text.secondary">Nenhum resultado encontrado para o período informado.</Typography>
             </Paper>
           )}
         </>

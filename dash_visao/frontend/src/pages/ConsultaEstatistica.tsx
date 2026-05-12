@@ -12,6 +12,7 @@ import {
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const UF_LIST = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
@@ -200,7 +201,7 @@ export default function ConsultaEstatistica() {
                 onClick={async () => {
                   setExporting(true);
                   try {
-                    const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: k }));
+                    const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: formatColumnLabel(k) }));
                     await exportService.exportGenericExcel({
                       data: resultados.map(r => ({ ...r })),
                       columns: cols,
@@ -232,7 +233,7 @@ export default function ConsultaEstatistica() {
                     <TableHead>
                       <TableRow>
                         {columns.map(col => (
-                          <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{col}</TableCell>
+                          <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatColumnLabel(col)}</TableCell>
                         ))}
                       </TableRow>
                     </TableHead>

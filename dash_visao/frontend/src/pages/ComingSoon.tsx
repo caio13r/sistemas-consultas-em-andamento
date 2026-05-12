@@ -16,7 +16,7 @@ const ComingSoon: React.FC = () => {
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Paper sx={{ p: 6, textAlign: 'center' }}>
-        <ConstructionIcon sx={{ fontSize: 80, color: '#8d0f12', mb: 2, opacity: 0.7 }} />
+        <ConstructionIcon sx={{ fontSize: 80, color: '#7A1E26', mb: 2, opacity: 0.7 }} />
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#333' }}>
           Em Construção
         </Typography>

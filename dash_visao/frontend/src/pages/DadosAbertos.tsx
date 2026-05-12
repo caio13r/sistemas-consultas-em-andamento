@@ -8,6 +8,7 @@ import {
 import { Search as SearchIcon } from '@mui/icons-material';
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const TIPOS = [
   { value: 'conselheiros',         label: 'Conselheiros',           needsDate: false, needsExercicio: false },
@@ -58,8 +59,11 @@ export default function DadosAbertos() {
     try {
       const params: Record<string, string> = { tipo };
       if (needsDate) {
-        params.data_inicio = dataInicio;
-        params.data_termino = dataTermino;
+        // Converte YYYY-MM (input month) para MM/YYYY (formato API Implanta)
+        const [ai, mi] = dataInicio.split('-');
+        const [at, mt] = dataTermino.split('-');
+        params.data_inicio = `${mi}/${ai}`;
+        params.data_termino = `${mt}/${at}`;
       }
       if (needsExercicio) {
         params.exercicio = exercicio;
@@ -95,16 +99,16 @@ export default function DadosAbertos() {
           <>
             <Grid item xs={6} sm={3} md={2}>
               <TextField
-                fullWidth size="small" label="Início (MM/AAAA)"
-                placeholder="01/2024"
+                fullWidth size="small" label="Início" type="month"
                 value={dataInicio} onChange={e => setDataInicio(e.target.value)}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
             <Grid item xs={6} sm={3} md={2}>
               <TextField
-                fullWidth size="small" label="Término (MM/AAAA)"
-                placeholder="12/2024"
+                fullWidth size="small" label="Término" type="month"
                 value={dataTermino} onChange={e => setDataTermino(e.target.value)}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
           </>
@@ -136,7 +140,7 @@ export default function DadosAbertos() {
             <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
               <Table stickyHeader size="small">
                 <TableHead><TableRow>
-                  {columns.map(col => <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{col}</TableCell>)}
+                  {columns.map(col => <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatColumnLabel(col)}</TableCell>)}
                 </TableRow></TableHead>
                 <TableBody>
                   {resultados.map((r, i) => (

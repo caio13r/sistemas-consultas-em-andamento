@@ -13,10 +13,14 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
   requiredPermission,
   requiredPermissions,
 }) => {
-  const { isAuthenticated, hasPermission, hasAnyPermission } = useAuth();
+  const { isAuthenticated, acceptedTerms, hasPermission, hasAnyPermission } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!acceptedTerms) {
+    return <Navigate to="/termos-de-uso" replace />;
   }
 
   if (requiredPermission && !hasPermission(requiredPermission)) {

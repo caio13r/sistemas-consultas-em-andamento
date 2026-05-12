@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from ..database import get_db3
+from ..database import get_db3, fix_row_encoding
 from ..models import User
 from ..core.auth import check_permission
 from ..lib.sql_loader import load_sql
@@ -115,7 +115,7 @@ def buscar_tabela(
         sql = load_sql("tabelas_centralizadas", tabela["sql_file"])
         query_sql = text(sql)
         rows = db3.execute(query_sql).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return TabelaResponse(
             total=len(resultados),
             tipo=tipo,
@@ -154,5 +154,5 @@ def buscar_tabela(
         total=total,
         tipo=tipo,
         nome=tabela["nome"],
-        resultados=[dict(r) for r in rows],
+        resultados=[fix_row_encoding(dict(r)) for r in rows],
     )

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from ..database import get_db2, get_db3
+from ..database import get_db2, get_db3, fix_row_encoding
 from ..models import User
 from ..core.auth import check_permission
 from ..lib.sql_loader import load_sql
@@ -184,7 +184,7 @@ def buscar_estatistica(
         # Converte parâmetros @Param do SQL Server para :Param do SQLAlchemy
         sql = sql.replace("@CRO_UF", ":CRO_UF").replace("@Ano", ":Ano")
         rows = db3.execute(text(sql), bind).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return EstatisticaResponse(
             total=len(resultados), tipo=tipo, nome=est["nome"], resultados=resultados,
         )
@@ -217,7 +217,7 @@ def buscar_estatistica(
         ORDER BY {order}
     """)
     rows = db3.execute(query_sql, params).mappings().all()
-    resultados = [dict(r) for r in rows]
+    resultados = [fix_row_encoding(dict(r)) for r in rows]
 
     return EstatisticaResponse(
         total=len(resultados), tipo=tipo, nome=est["nome"], resultados=resultados,

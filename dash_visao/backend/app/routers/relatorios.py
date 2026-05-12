@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 import logging
 
-from ..database import get_db3
+from ..database import get_db3, fix_row_encoding
 from ..models import User
 from ..core.auth import get_current_active_user, check_any_permission
 from ..lib.sql_loader import load_sql
@@ -56,7 +56,7 @@ def metadata_profissionais(
 
 @router.get("/profissionais-por-uf")
 def relatorio_profissionais_por_uf(
-    situacao: Optional[str] = Query(None, description="Filtrar por situacao (Ativo, Inativo, etc)"),
+    situacao: Optional[str] = Query(None, description="Filtrar por situação (Ativo, Inativo, etc)"),
     categoria: Optional[str] = Query(None, description="Filtrar por categoria (CD, TPD, etc)"),
     current_user: User = Depends(check_any_permission(["view_relatorios_diversos", "view_consulta_estatistica"])),
     db3: Session = Depends(get_db3),
@@ -86,13 +86,13 @@ def relatorio_profissionais_por_uf(
         ORDER BY uf, Categoria
     """
     result = db3.execute(text(sql), params)
-    return [dict(row._mapping) for row in result]
+    return [fix_row_encoding(dict(row._mapping)) for row in result]
 
 
 @router.get("/profissionais-por-categoria")
 def relatorio_profissionais_por_categoria(
     uf: Optional[str] = Query(None, description="Filtrar por UF"),
-    situacao: Optional[str] = Query(None, description="Filtrar por situacao"),
+    situacao: Optional[str] = Query(None, description="Filtrar por situação"),
     current_user: User = Depends(check_any_permission(["view_relatorios_diversos", "view_consulta_estatistica"])),
     db3: Session = Depends(get_db3),
 ):
@@ -120,12 +120,12 @@ def relatorio_profissionais_por_categoria(
         ORDER BY Categoria, Situacao
     """
     result = db3.execute(text(sql), params)
-    return [dict(row._mapping) for row in result]
+    return [fix_row_encoding(dict(row._mapping)) for row in result]
 
 
 @router.get("/empresas-por-uf")
 def relatorio_empresas_por_uf(
-    situacao: Optional[str] = Query(None, description="Filtrar por situacao"),
+    situacao: Optional[str] = Query(None, description="Filtrar por situação"),
     current_user: User = Depends(check_any_permission(["view_relatorios_diversos"])),
     db3: Session = Depends(get_db3),
 ):
@@ -151,7 +151,7 @@ def relatorio_empresas_por_uf(
         ORDER BY uf, Categoria
     """
     result = db3.execute(text(sql), params)
-    return [dict(row._mapping) for row in result]
+    return [fix_row_encoding(dict(row._mapping)) for row in result]
 
 
 @router.get("/profissional-x-formacao")
@@ -189,10 +189,10 @@ def relatorio_profissional_formacao(
     """
     try:
         result = db3.execute(text(sql), params)
-        return [dict(row._mapping) for row in result]
+        return [fix_row_encoding(dict(row._mapping)) for row in result]
     except Exception as e:
         logger.error(f"Erro no relatorio profissional x formacao: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao gerar relatorio de formacao.")
+        raise HTTPException(status_code=500, detail="Erro ao gerar relatório de formação.")
 
 
 @router.get("/resumo-nacional")
@@ -211,7 +211,7 @@ def relatorio_resumo_nacional(
             GROUP BY Situacao
             ORDER BY total DESC
         """))
-        resumo["pf_por_situacao"] = [dict(row._mapping) for row in result]
+        resumo["pf_por_situacao"] = [fix_row_encoding(dict(row._mapping)) for row in result]
     except Exception:
         resumo["pf_por_situacao"] = []
 
@@ -223,7 +223,7 @@ def relatorio_resumo_nacional(
             GROUP BY Situacao
             ORDER BY total DESC
         """))
-        resumo["pj_por_situacao"] = [dict(row._mapping) for row in result]
+        resumo["pj_por_situacao"] = [fix_row_encoding(dict(row._mapping)) for row in result]
     except Exception:
         resumo["pj_por_situacao"] = []
 
@@ -331,7 +331,7 @@ def relatorio_adimplencia(
         extra_cols="SUM(Pago_a_menor) AS Pago_a_Menor",
     )
     rows = db3.execute(text(sql_str), params).mappings().all()
-    resultados = [dict(r) for r in rows]
+    resultados = [fix_row_encoding(dict(r)) for r in rows]
     resultados = _add_brasil_row(resultados, ["Pago_a_Menor"])
     return {"total": len(resultados), "resultados": resultados}
 
@@ -349,7 +349,7 @@ def relatorio_adimplencia_valores(
         extra_cols="SUM(Valor_Devido_Nao_pago) AS Valor_Devido_Nao_Pago, SUM(Pago_a_menor) AS Pago_a_Menor, SUM(Valor_Devido_Pago_a_menor) AS Valor_Devido_Pago_a_Menor",
     )
     rows = db3.execute(text(sql_str), params).mappings().all()
-    resultados = [dict(r) for r in rows]
+    resultados = [fix_row_encoding(dict(r)) for r in rows]
 
     # Calcula Valor_Pago estimado: proporcional ao que foi pago vs não pago
     for r in resultados:
@@ -471,7 +471,7 @@ def relatorio_auditoria_resumo(
 
 def _validate_dates(inicio: Optional[str], termino: Optional[str]):
     if not inicio or not termino:
-        raise HTTPException(status_code=400, detail="Parâmetros 'inicio' e 'termino' são obrigatórios (YYYY-MM-DD).")
+        raise HTTPException(status_code=400, detail="Parâmetros 'início' e 'término' são obrigatórios (YYYY-MM-DD).")
     if not _DATE_RE.match(inicio) or not _DATE_RE.match(termino):
         raise HTTPException(status_code=400, detail="Datas devem estar no formato YYYY-MM-DD.")
     return inicio, termino
@@ -497,7 +497,7 @@ def relatorio_arrecadacao_bb(
         ORDER BY CRO, Convenio
     """)
     rows = db3.execute(sql, {"inicio": inicio, "termino": termino}).mappings().all()
-    return [dict(r) for r in rows]
+    return [fix_row_encoding(dict(r)) for r in rows]
 
 
 @router.get("/tarifas-bb")
@@ -539,7 +539,7 @@ def relatorio_tarifas_bb(
         ORDER BY C.CRO, C.Convenio_BB, C.TipoTarifa
     """)
     rows = db3.execute(sql, {"inicio": inicio, "termino": termino}).mappings().all()
-    return [dict(r) for r in rows]
+    return [fix_row_encoding(dict(r)) for r in rows]
 
 
 @router.get("/pagamentos-diversos")
@@ -561,7 +561,7 @@ def relatorio_pagamentos_diversos(
         ORDER BY CRO, FormaPagamento
     """)
     rows = db3.execute(sql, {"inicio": inicio, "termino": termino}).mappings().all()
-    return [dict(r) for r in rows]
+    return [fix_row_encoding(dict(r)) for r in rows]
 
 
 @router.get("/arrecadacao-selfpay")
@@ -585,7 +585,7 @@ def relatorio_arrecadacao_selfpay(
         ORDER BY CRO, DataCredito
     """)
     rows = db3.execute(sql, {"inicio": inicio, "termino": termino}).mappings().all()
-    return [dict(r) for r in rows]
+    return [fix_row_encoding(dict(r)) for r in rows]
 
 
 @router.get("/processos-especialidade")
@@ -622,7 +622,7 @@ def relatorio_processos_especialidade(
         ORDER BY CRO, DataAndamento DESC
     """)
     rows = db3.execute(sql, params).mappings().all()
-    return [dict(r) for r in rows]
+    return [fix_row_encoding(dict(r)) for r in rows]
 
 
 @router.get("/delegado-eleitor")
@@ -638,7 +638,7 @@ def relatorio_delegado_eleitor(
         FROM CFO_CWS.dbo.vw_Delegado_Eleitor_Email
         WHERE CRO = :uf
     """)
-    emails = {row["CpfCnpj"]: dict(row) for row in db3.execute(sql_email, {"uf": uf.upper()}).mappings().all()}
+    emails = {row["CpfCnpj"]: fix_row_encoding(dict(row)) for row in db3.execute(sql_email, {"uf": uf.upper()}).mappings().all()}
 
     # Phone data
     sql_tel = text("""
@@ -679,4 +679,4 @@ def relatorio_profissional_formacao_sql(
         sql_content += " AND " + " AND ".join(conditions)
 
     rows = db3.execute(text(sql_content), params).mappings().all()
-    return [dict(r) for r in rows]
+    return [fix_row_encoding(dict(r)) for r in rows]

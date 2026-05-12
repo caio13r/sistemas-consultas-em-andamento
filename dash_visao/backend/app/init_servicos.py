@@ -68,15 +68,6 @@ SERVICOS_DATA = [
         "scope_type": "cfo",
     },
     {
-        "nome": "Dados Abertos",
-        "slug": "dados-abertos",
-        "descricao": "Disponibilização de dados abertos e transparência",
-        "icone": "Public",
-        "ordem": 8,
-        "permissao_nome": "view_dados_abertos",
-        "scope_type": "global",
-    },
-    {
         "nome": "Tabelas Centralizadas",
         "slug": "tabelas-centralizadas",
         "descricao": "Tabelas de referência (CFO, CRO, UFs, Categorias)",

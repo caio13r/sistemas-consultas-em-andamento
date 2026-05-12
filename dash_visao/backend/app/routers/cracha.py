@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from ..database import get_db1, get_db3
+from ..database import get_db1, get_db3, fix_row_encoding
 from ..models import User
 from ..core.auth import check_permission
 from pydantic import BaseModel
@@ -39,7 +39,7 @@ def buscar_dados_profissional(
         AND Situacao = 'Ativo'
     """)
     rows = db3.execute(query_sql, {"cpf": cpf_limpo}).mappings().all()
-    return CrachaResponse(total=len(rows), resultados=[dict(r) for r in rows])
+    return CrachaResponse(total=len(rows), resultados=[fix_row_encoding(dict(r)) for r in rows])
 
 
 @router.post("/upload-foto")
@@ -102,7 +102,7 @@ def gerar_cracha(
     if not rows:
         raise HTTPException(status_code=404, detail="Profissional não encontrado ou inativo.")
 
-    profissional = dict(rows[0])
+    profissional = fix_row_encoding(dict(rows[0]))
 
     # Busca foto no DB1 (se não enviada no request)
     foto = req.foto_base64

@@ -126,6 +126,7 @@ def create_user_request(
         justificativa=data.justificativa,
         outro=data.outro,
         sugestao_desenvolvimento=data.sugestao_desenvolvimento,
+        hashed_password=get_password_hash(data.senha),
         status="pendente",
     )
     db.add(req)
@@ -276,12 +277,12 @@ def approve_request(
     if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="Já existe um usuário com este username")
 
-    # Criar o usuário
+    # Criar o usuário (usa a senha que o solicitante já definiu)
     new_user = User(
         username=data.username,
         email=req.email,
         full_name=req.nome_completo,
-        hashed_password=get_password_hash(data.password),
+        hashed_password=req.hashed_password,
         is_active=True,
         is_superuser=False,
     )

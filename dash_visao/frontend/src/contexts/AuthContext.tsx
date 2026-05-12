@@ -4,12 +4,14 @@ import { userService, User } from '../services/userService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  acceptedTerms: boolean;
   user: User | null;
   permissions: string[];
   roles: string[];
   isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  acceptTerms: () => void;
   fetchCurrentUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
@@ -22,6 +24,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
+  const [acceptedTerms, setAcceptedTerms] = useState<boolean>(
+    () => localStorage.getItem('acceptedTerms') === 'true'
+  );
 
   const fetchCurrentUser = async () => {
     try {
@@ -50,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     try {
       await authService.login(username, password);
+      setAcceptedTerms(false);
+      localStorage.removeItem('acceptedTerms');
       await fetchCurrentUser();
     } catch (error) {
       setIsAuthenticated(false);
@@ -66,6 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setPermissions([]);
     setRoles([]);
+    setAcceptedTerms(false);
+    localStorage.removeItem('acceptedTerms');
+  };
+
+  const acceptTerms = () => {
+    setAcceptedTerms(true);
+    localStorage.setItem('acceptedTerms', 'true');
   };
 
   const hasPermission = useCallback((permission: string): boolean => {
@@ -83,12 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
+      acceptedTerms,
       user,
       permissions,
       roles,
       isAdmin,
       login,
       logout,
+      acceptTerms,
       fetchCurrentUser,
       hasPermission,
       hasAnyPermission,
@@ -100,12 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 const defaultAuth: AuthContextType = {
   isAuthenticated: false,
+  acceptedTerms: false,
   user: null,
   permissions: [],
   roles: [],
   isAdmin: false,
   login: async () => { throw new Error('Sistema carregando. Aguarde e tente novamente.'); },
   logout: () => {},
+  acceptTerms: () => {},
   fetchCurrentUser: async () => {},
   hasPermission: () => false,
   hasAnyPermission: () => false,

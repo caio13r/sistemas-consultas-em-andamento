@@ -8,23 +8,24 @@ import {
 import { Send as SendIcon, Assessment as ReportIcon } from '@mui/icons-material';
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const LGPD_OPTIONS = [
   { value: '5', label: 'Totalmente adequado' },
   { value: '4', label: 'Razoavelmente adequado' },
   { value: '3', label: 'Pouco adequado' },
-  { value: '2', label: 'Em processo de contratacao de empresa' },
-  { value: '1', label: 'Nao iniciamos a adequacao' },
+  { value: '2', label: 'Em processo de contratação de empresa' },
+  { value: '1', label: 'Não iniciamos a adequação' },
 ];
 
 const SIM_NAO = [
   { value: '1', label: 'Sim' },
-  { value: '0', label: 'Nao' },
+  { value: '0', label: 'Não' },
 ];
 
 const PORTAL_OPTIONS = [
-  { value: '1', label: 'Proprio' },
-  { value: '0', label: 'Solucao de Terceiros' },
+  { value: '1', label: 'Próprio' },
+  { value: '0', label: 'Solução de Terceiros' },
 ];
 
 const initialForm = {
@@ -49,12 +50,12 @@ export default function FormularioLAI() {
     const required = ['f_autlai', 'f_portlai', 'f_cargolai', 'f_vinculolai', 'f_aptoautlai', 'f_aptolai', 'f_sitelai', 'f_portallai', 'f_anolai', 'f_lgpd', 'f_autlgpd'];
     const missing = required.filter(k => !form[k as keyof typeof form]);
     if (missing.length > 0) {
-      setSnackbar({ open: true, message: 'Preencha todos os campos obrigatorios.', severity: 'warning' }); return;
+      setSnackbar({ open: true, message: 'Preencha todos os campos obrigatórios.', severity: 'warning' }); return;
     }
     setSubmitting(true);
     try {
       await api.post('/lai/enviar', form);
-      setSnackbar({ open: true, message: 'Formulario LAI enviado com sucesso!', severity: 'success' });
+      setSnackbar({ open: true, message: 'Formulário LAI enviado com sucesso!', severity: 'success' });
       setForm(initialForm);
     } catch (e: any) {
       setSnackbar({ open: true, message: e.response?.data?.detail || 'Erro ao enviar', severity: 'error' });
@@ -67,7 +68,7 @@ export default function FormularioLAI() {
       const res = await api.get('/lai/relatorio');
       setRelatorio(res.data.resultados || []);
     } catch (e: any) {
-      setSnackbar({ open: true, message: e.response?.data?.detail || 'Erro ao carregar relatorio', severity: 'error' });
+      setSnackbar({ open: true, message: e.response?.data?.detail || 'Erro ao carregar relatório', severity: 'error' });
     } finally { setLoadingRelatorio(false); }
   };
 
@@ -84,14 +85,14 @@ export default function FormularioLAI() {
 
   return (
     <PageContainer>
-      <Typography variant="h5" gutterBottom>LAI - Lei de Acesso a Informacao</Typography>
+      <Typography variant="h5" gutterBottom>LAI - Lei de Acesso à Informação</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Formulario LAI/LGPD e relatorio de respostas.
+        Formulário LAI/LGPD e relatório de respostas.
       </Typography>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-        <Tab label="Formulario LAI" />
-        <Tab label="Relatorio" />
+        <Tab label="Formulário LAI" />
+        <Tab label="Relatório" />
       </Tabs>
       <Divider sx={{ mb: 3 }} />
 
@@ -99,7 +100,7 @@ export default function FormularioLAI() {
         <Card>
           <CardContent>
             <Alert severity="warning" sx={{ mb: 3 }}>
-              Por favor, so preencher a solicitacao abaixo as INSTITUICOES DE ENSINO que possuem vinculo explicito com a instituicao de ensino para a qual solicita acesso.
+              Por favor, só preencher a solicitação abaixo as INSTITUIÇÕES DE ENSINO que possuem vínculo explícito com a instituição de ensino para a qual solicita acesso.
             </Alert>
 
             <Grid container spacing={2}>
@@ -108,7 +109,7 @@ export default function FormularioLAI() {
                   onChange={e => setField('f_autlai', e.target.value)} required />
               </Grid>
               <Grid item xs={12} sm={5}>
-                <TextField fullWidth size="small" label="Portaria (numero/ano)" value={form.f_portlai}
+                <TextField fullWidth size="small" label="Portaria (número/ano)" value={form.f_portlai}
                   onChange={e => setField('f_portlai', e.target.value)} required placeholder="00/2024" />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -116,7 +117,7 @@ export default function FormularioLAI() {
                   onChange={e => setField('f_cargolai', e.target.value)} required />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth size="small" label="Vinculo empregaticio" value={form.f_vinculolai}
+                <TextField fullWidth size="small" label="Vínculo empregatício" value={form.f_vinculolai}
                   onChange={e => setField('f_vinculolai', e.target.value)} required />
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -129,10 +130,10 @@ export default function FormularioLAI() {
                 {renderSelect('f_sitelai', 'Publicada no site do CRO?', SIM_NAO)}
               </Grid>
               <Grid item xs={12} sm={6}>
-                {renderSelect('f_portallai', 'Portal da Transparencia', PORTAL_OPTIONS)}
+                {renderSelect('f_portallai', 'Portal da Transparência', PORTAL_OPTIONS)}
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth size="small" label="Solucao de terceiros (qual?)" value={form.f_sitesolu}
+                <TextField fullWidth size="small" label="Solução de terceiros (qual?)" value={form.f_sitesolu}
                   onChange={e => setField('f_sitesolu', e.target.value)}
                   disabled={form.f_portallai !== '0'} />
               </Grid>
@@ -141,24 +142,24 @@ export default function FormularioLAI() {
                   onChange={e => setField('f_anolai', e.target.value)} required placeholder="2020" inputProps={{ maxLength: 4 }} />
               </Grid>
               <Grid item xs={12} sm={4}>
-                {renderSelect('f_lgpd', 'Grau de adequacao LGPD', LGPD_OPTIONS)}
+                {renderSelect('f_lgpd', 'Grau de adequação LGPD', LGPD_OPTIONS)}
               </Grid>
               <Grid item xs={12} sm={4}>
-                {renderSelect('f_autlgpd', 'Responsavel LGPD definido?', SIM_NAO)}
+                {renderSelect('f_autlgpd', 'Responsável LGPD definido?', SIM_NAO)}
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth size="small" label="Area do responsavel LGPD" value={form.f_arealgpd}
+                <TextField fullWidth size="small" label="Área do responsável LGPD" value={form.f_arealgpd}
                   onChange={e => setField('f_arealgpd', e.target.value)}
                   disabled={form.f_autlgpd !== '1'} />
               </Grid>
               <Grid item xs={12} sm={6}>
-                {renderSelect('f_explgpd', 'Responsavel tem experiencia?', [{ value: 'Sim', label: 'Sim' }, { value: 'Nao', label: 'Nao' }])}
+                {renderSelect('f_explgpd', 'Responsável tem experiência?', [{ value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }])}
               </Grid>
             </Grid>
 
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <Button variant="contained" size="large" startIcon={<SendIcon />} onClick={handleSubmit} disabled={submitting}>
-                {submitting ? 'Enviando...' : 'Enviar Formulario'}
+                {submitting ? 'Enviando...' : 'Enviar Formulário'}
               </Button>
             </Box>
           </CardContent>
@@ -168,7 +169,7 @@ export default function FormularioLAI() {
       {tab === 1 && (
         <>
           <Button variant="contained" startIcon={<ReportIcon />} onClick={handleLoadRelatorio} disabled={loadingRelatorio} sx={{ mb: 3 }}>
-            {loadingRelatorio ? 'Carregando...' : 'Carregar Relatorio'}
+            {loadingRelatorio ? 'Carregando...' : 'Carregar Relatório'}
           </Button>
 
           {loadingRelatorio ? (
@@ -181,7 +182,7 @@ export default function FormularioLAI() {
                   <TableHead>
                     <TableRow>
                       {columns.map(col => (
-                        <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{col}</TableCell>
+                        <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatColumnLabel(col)}</TableCell>
                       ))}
                     </TableRow>
                   </TableHead>

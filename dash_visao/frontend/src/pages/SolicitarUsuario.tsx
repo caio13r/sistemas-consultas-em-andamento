@@ -3,15 +3,18 @@ import {
   Container, Paper, Stepper, Step, StepLabel, Typography, Button, Box,
   TextField, RadioGroup, FormControlLabel, Radio, FormControl, FormLabel,
   Card, CardContent, Checkbox, Alert, CircularProgress, Chip, MenuItem, Select,
-  InputLabel, FormHelperText
+  InputLabel, FormHelperText, InputAdornment, IconButton
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
   Send as SendIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
+  Visibility,
+  VisibilityOff,
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
+import BackgroundEffect from '../components/BackgroundEffect';
 import {
   getPublicServicos,
   createUserRequest,
@@ -47,6 +50,11 @@ const SolicitarUsuario: React.FC = () => {
   const [telefone, setTelefone] = useState('');
   const [organizacao, setOrganizacao] = useState('');
   const [departamento, setDepartamento] = useState('');
+
+  const [senha, setSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [showSenha, setShowSenha] = useState(false);
+  const [showConfirmarSenha, setShowConfirmarSenha] = useState(false);
 
   // Step 2
   const [servicos, setServicos] = useState<ServicoPublic[]>([]);
@@ -87,7 +95,7 @@ const SolicitarUsuario: React.FC = () => {
 
   const canAdvance = (): boolean => {
     if (activeStep === 0) {
-      return !!(origemTipo && nomeCompleto && email && organizacao);
+      return !!(origemTipo && nomeCompleto && email && organizacao && senha && senha.length >= 6 && senha === confirmarSenha);
     }
     if (activeStep === 1) {
       return selectedServicos.size > 0;
@@ -112,6 +120,7 @@ const SolicitarUsuario: React.FC = () => {
       const result = await createUserRequest({
         nome_completo: nomeCompleto,
         email,
+        senha,
         telefone: telefone || undefined,
         origem_tipo: origemTipo,
         organizacao,
@@ -134,7 +143,8 @@ const SolicitarUsuario: React.FC = () => {
   if (success) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Container maxWidth="sm">
+        <BackgroundEffect />
+        <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
           <Paper sx={{ p: 4, textAlign: 'center' }}>
             <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
             <Typography variant="h4" gutterBottom>Solicitação Enviada!</Typography>
@@ -160,16 +170,27 @@ const SolicitarUsuario: React.FC = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#FBF8F4', position: 'relative' }}>
+      {/* Mesh grid background */}
+      <Box
+        sx={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+          backgroundImage: `
+            linear-gradient(rgba(122,30,38,0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(122,30,38,0.06) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+        }}
+      />
       {/* Header */}
-      <Box sx={{ bgcolor: '#8d0f12', color: 'white', py: 2, px: 3 }}>
+      <Box sx={{ bgcolor: '#7A1E26', color: 'white', py: 2, px: 3, position: 'relative', zIndex: 1 }}>
         <Container maxWidth="md">
-          <Typography variant="h6">Sistema de Consultas - CFO</Typography>
+          <Typography variant="h6">Visão CFO</Typography>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>Solicitação de Novo Usuário</Typography>
         </Container>
       </Box>
 
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
         <Paper sx={{ p: 4 }}>
           <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
             {steps.map(label => (
@@ -214,6 +235,38 @@ const SolicitarUsuario: React.FC = () => {
               <TextField
                 fullWidth label="Telefone" value={telefone}
                 onChange={(e) => setTelefone(e.target.value)} sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth label="Senha *" value={senha}
+                type={showSenha ? 'text' : 'password'}
+                onChange={(e) => setSenha(e.target.value)} sx={{ mb: 2 }}
+                helperText="Mínimo de 6 caracteres"
+                error={senha.length > 0 && senha.length < 6}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowSenha(!showSenha)} edge="end" size="small">
+                        {showSenha ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <TextField
+                fullWidth label="Confirmar Senha *" value={confirmarSenha}
+                type={showConfirmarSenha ? 'text' : 'password'}
+                onChange={(e) => setConfirmarSenha(e.target.value)} sx={{ mb: 2 }}
+                error={confirmarSenha.length > 0 && senha !== confirmarSenha}
+                helperText={confirmarSenha.length > 0 && senha !== confirmarSenha ? 'As senhas não coincidem' : ''}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowConfirmarSenha(!showConfirmarSenha)} edge="end" size="small">
+                        {showConfirmarSenha ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
 
               {origemTipo === 'cro' && (

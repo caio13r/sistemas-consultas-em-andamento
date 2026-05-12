@@ -16,7 +16,8 @@ def init_permissions_data():
             {"name": "Cadastro", "description": "Equipe de Cadastro", "level": 2},
             {"name": "Gestor", "description": "Gestores de área", "level": 3},
             {"name": "Analista", "description": "Analistas", "level": 2},
-            {"name": "Visualizador", "description": "Apenas visualização", "level": 1}
+            {"name": "Visualizador", "description": "Apenas visualização", "level": 1},
+            {"name": "Jurídico", "description": "Equipe do Jurídico", "level": 2},
         ]
 
         for role_data in roles_data:
@@ -92,12 +93,12 @@ def init_permissions_data():
             # Permissões de módulos de consulta
             {"name": "view_consulta_estatistica", "description": "Visualizar consulta estatística", "action": "view", "resource": "consulta_estatistica"},
             {"name": "view_consulta_fiscalizacao", "description": "Visualizar consulta fiscalização", "action": "view", "resource": "consulta_fiscalizacao"},
+            {"name": "edit_consulta_fiscalizacao", "description": "Editar contatos de fiscalização", "action": "edit", "resource": "consulta_fiscalizacao"},
             {"name": "view_consulta_identidade", "description": "Visualizar consulta identidade", "action": "view", "resource": "consulta_identidade"},
             {"name": "manage_consulta_identidade", "description": "Gerenciar consulta identidade (registrar carteirinhas)", "action": "manage", "resource": "consulta_identidade"},
             {"name": "view_tabelas_centralizadas", "description": "Visualizar tabelas centralizadas", "action": "view", "resource": "tabelas_centralizadas"},
             {"name": "view_eleicoes_regionais", "description": "Visualizar eleições regionais", "action": "view", "resource": "eleicoes_regionais"},
             {"name": "view_consulta_rfb", "description": "Visualizar consulta RFB", "action": "view", "resource": "consulta_rfb"},
-            {"name": "view_dados_abertos", "description": "Visualizar dados abertos", "action": "view", "resource": "dados_abertos"},
             {"name": "view_relatorios_diversos", "description": "Visualizar relatórios diversos", "action": "view", "resource": "relatorios_diversos"},
             {"name": "view_cracha", "description": "Visualizar e gerar crachá", "action": "view", "resource": "cracha"},
             {"name": "view_lai", "description": "Visualizar relatório LAI", "action": "view", "resource": "lai"},
@@ -106,6 +107,7 @@ def init_permissions_data():
             # Permissões de documentos
             {"name": "view_documentos", "description": "Visualizar e fazer upload de documentos", "action": "view", "resource": "documentos"},
             {"name": "manage_documentos", "description": "Validar e excluir documentos", "action": "manage", "resource": "documentos"},
+
         ]
         
         for perm_data in permissions_data:
@@ -167,7 +169,8 @@ def init_permissions_data():
                 Permission.name.in_([
                     "view_auditorias", "create_auditorias", "edit_auditorias",
                     "approve_auditorias", "view_relatorio_auditoria",
-                    "view_users", "view_consulta_integrada", "view_consulta_auditoria"
+                    "view_users", "view_consulta_integrada", "view_consulta_auditoria",
+                    "edit_consulta_fiscalizacao"
                 ])
             ).all()
             gestor_role.permissions = gestor_permissions
@@ -178,7 +181,8 @@ def init_permissions_data():
                 Permission.action == "view"
             ).all()
             visualizador_role.permissions = view_permissions
-        
+
+
         db.commit()
         
         # Criar usuário administrador se não existir

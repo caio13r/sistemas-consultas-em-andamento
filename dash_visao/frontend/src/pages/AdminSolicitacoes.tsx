@@ -56,7 +56,6 @@ const AdminSolicitacoes: React.FC = () => {
   // Approve dialog
   const [approveOpen, setApproveOpen] = useState(false);
   const [approveUsername, setApproveUsername] = useState('');
-  const [approvePassword, setApprovePassword] = useState('');
   const [approveRoleIds, setApproveRoleIds] = useState<number[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
 
@@ -148,7 +147,6 @@ const AdminSolicitacoes: React.FC = () => {
     if (!selectedReq) return;
     const suggestedUsername = selectedReq.email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '');
     setApproveUsername(suggestedUsername);
-    setApprovePassword('');
     setApproveRoleIds([]);
     setApproveOpen(true);
   };
@@ -159,7 +157,6 @@ const AdminSolicitacoes: React.FC = () => {
     try {
       await approveRequest(selectedReq.id, {
         username: approveUsername,
-        password: approvePassword,
         role_ids: approveRoleIds,
         admin_notes: adminNotes || undefined,
       });
@@ -466,8 +463,7 @@ const AdminSolicitacoes: React.FC = () => {
             onChange={(e) => setApproveUsername(e.target.value)} sx={{ mb: 2, mt: 1 }}
           />
           <TextField
-            fullWidth label="Senha *" type="password" value={approvePassword}
-            onChange={(e) => setApprovePassword(e.target.value)} sx={{ mb: 2 }}
+
           />
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Perfis (Roles)</InputLabel>
@@ -494,7 +490,7 @@ const AdminSolicitacoes: React.FC = () => {
           <Button onClick={() => setApproveOpen(false)}>Cancelar</Button>
           <Button
             variant="contained" color="success" onClick={handleApprove}
-            disabled={!approveUsername || !approvePassword || actionLoading}
+            disabled={!approveUsername || actionLoading}
           >
             {actionLoading ? <CircularProgress size={20} /> : 'Confirmar Aprovação'}
           </Button>

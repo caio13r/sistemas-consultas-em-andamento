@@ -41,6 +41,7 @@ AUDIT_TYPES = {
         "nome": "Inscrição Principal em Mais de Um CRO",
         "view": "CFO_CWS.dbo.vw_Cons_Inscricao_Principal_Em_Mais_De_Um_CRO",
         "columns": "NOME_1, CPF, CRO_1, CATE_1, INSC_1, TIPO_INSCRICAO_1, SITUACAO_1, DETALHE_1, DATA_INSC_1, CRO_2, CATE_2, INSC_2, TIPO_INSCRICAO_2, SITUACAO_2, DETALHE_2, DATA_INSC_2",
+        "filter_column": "CRO_1",
         "limit": 1000,
     },
     "inscricoes_isentas": {
@@ -87,7 +88,7 @@ AUDIT_TYPES = {
     },
     "empresa_ativa_sem_rt": {
         "nome": "Empresa Ativa Sem RT",
-        "view": "CFO_CWS.dbo.vw_Cons_Empresa_Ativa_Sem_RT",
+        "view": "CFO_CWS.dbo.Cons_Empresa_Ativa_Sem_RT",
         "columns": "*",
         "limit": 2000,
     },
@@ -218,10 +219,12 @@ def listar_tipos_auditoria(
 def buscar_auditoria(
     tipo: str = Query(..., description="Tipo de auditoria (ver /tipos)"),
     cro: Optional[str] = Query(None, description="Filtrar por CRO (ex: SP, RJ)"),
+    page: int = Query(1, ge=1, description="Número da página"),
+    page_size: int = Query(50, ge=10, le=200, description="Registros por página"),
     db3: Session = Depends(get_db3),
     current_user: User = Depends(check_permission("view_consulta_auditoria")),
 ):
-    """Busca dados de auditoria por tipo e CRO"""
+    """Busca dados de auditoria por tipo e CRO com paginação"""
     if tipo not in AUDIT_TYPES:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail=f"Tipo inválido. Use um de: {list(AUDIT_TYPES.keys())}")
@@ -229,23 +232,35 @@ def buscar_auditoria(
     audit = AUDIT_TYPES[tipo]
     view = audit["view"]
     columns = audit["columns"]
-    limit = audit["limit"]
 
     conditions = []
     params = {}
 
     if cro:
-        conditions.append("CRO = :cro")
+        cro_col = audit.get("filter_column", "CRO")
+        conditions.append(f"{cro_col} = :cro")
         params["cro"] = cro.upper()
 
     where = " AND ".join(conditions) if conditions else "1=1"
 
-    count_sql = text(f"SELECT COUNT(*) FROM {view} WHERE {where}")
-    total = db3.execute(count_sql, params).scalar() or 0
+    offset = (page - 1) * page_size
+    params["offset"] = offset
+    params["page_size"] = page_size
 
-    query_sql = text(f"SELECT TOP {limit} {columns} FROM {view} WHERE {where}")
+    # Single query: COUNT(*) OVER() returns total alongside paginated rows
+    query_sql = text(
+        f"SELECT {columns}, COUNT(*) OVER() AS _total_count "
+        f"FROM {view} WHERE {where} "
+        f"ORDER BY (SELECT NULL) OFFSET :offset ROWS FETCH NEXT :page_size ROWS ONLY"
+    )
     rows = db3.execute(query_sql, params).mappings().all()
-    resultados = [dict(r) for r in rows]
+
+    if rows:
+        total = rows[0]["_total_count"]
+        resultados = [{k: v for k, v in dict(r).items() if k != "_total_count"} for r in rows]
+    else:
+        total = 0
+        resultados = []
 
     return AuditoriaSearchResponse(
         total=total,

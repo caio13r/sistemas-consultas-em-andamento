@@ -9,10 +9,15 @@ import {
   Assessment as AssessmentIcon,
   FileDownload as DownloadIcon,
   ArrowBack as BackIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
+import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const UF_LIST = [
   'AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
@@ -33,53 +38,32 @@ interface RelatorioDef {
 const relatorios: RelatorioDef[] = [
   {
     id: 'prof_uf', nome: 'Profissionais por UF',
-    descricao: 'Quantidade de profissionais agrupados por estado, categoria e situacao',
+    descricao: 'Quantidade de profissionais agrupados por estado, categoria e situação',
     endpoint: '/relatorios/profissionais-por-uf', filters: ['situacao', 'categoria'],
   },
   {
     id: 'prof_cat', nome: 'Profissionais por Categoria',
-    descricao: 'Quantidade de profissionais agrupados por categoria e situacao',
+    descricao: 'Quantidade de profissionais agrupados por categoria e situação',
     endpoint: '/relatorios/profissionais-por-categoria', filters: ['uf', 'situacao'],
   },
   {
     id: 'emp_uf', nome: 'Empresas por UF',
-    descricao: 'Quantidade de empresas agrupadas por estado, categoria e situacao',
+    descricao: 'Quantidade de empresas agrupadas por estado, categoria e situação',
     endpoint: '/relatorios/empresas-por-uf', filters: ['situacao'],
   },
   {
-    id: 'prof_form', nome: 'Profissional x Formacao',
-    descricao: 'Relatorio de profissionais por instituicao de ensino e curso',
+    id: 'prof_form', nome: 'Profissional x Formação',
+    descricao: 'Relatório de profissionais por instituição de ensino e curso',
     endpoint: '/relatorios/profissional-x-formacao', filters: ['uf', 'categoria'],
   },
   {
     id: 'resumo', nome: 'Resumo Nacional',
-    descricao: 'Visao geral com totais de profissionais e empresas por situacao',
+    descricao: 'Visão geral com totais de profissionais e empresas por situação',
     endpoint: '/relatorios/resumo-nacional', filters: [],
-  },
-  // --- Relatórios Financeiros ---
-  {
-    id: 'arrecadacao_bb', nome: 'Arrecadacao Banco do Brasil',
-    descricao: 'Relatorio de arrecadacao do Banco do Brasil por convenio e CRO',
-    endpoint: '/relatorios/arrecadacao-bb', filters: ['periodo'],
-  },
-  {
-    id: 'tarifas_bb', nome: 'Tarifas Banco do Brasil',
-    descricao: 'Relatorio de tarifas bancarias (registro, liquidacao, baixa) por convenio',
-    endpoint: '/relatorios/tarifas-bb', filters: ['periodo'],
-  },
-  {
-    id: 'pagamentos_diversos', nome: 'Pagamentos Diversos',
-    descricao: 'Relatorio de pagamentos diversos por forma de pagamento e CRO',
-    endpoint: '/relatorios/pagamentos-diversos', filters: ['periodo'],
-  },
-  {
-    id: 'arrecadacao_selfpay', nome: 'Arrecadacao SelfPay/BkBank',
-    descricao: 'Arrecadacao e tarifas de cartao SelfPay com split federal',
-    endpoint: '/relatorios/arrecadacao-selfpay', filters: ['periodo'],
   },
   {
     id: 'processos_esp', nome: 'Processos de Especialidade',
-    descricao: 'Processos de especialidade e habilitacao por CRO e periodo',
+    descricao: 'Processos de especialidade e habilitação por CRO e período',
     endpoint: '/relatorios/processos-especialidade', filters: ['periodo', 'uf', 'etapa'],
   },
   {
@@ -104,6 +88,7 @@ export default function RelatoriosDiversos() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' as any });
   const [categorias, setCategorias] = useState<string[]>(CATEGORIAS_FALLBACK);
   const [situacoes, setSituacoes] = useState<string[]>(SITUACOES_FALLBACK);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     api.get('/relatorios/metadata/profissionais')
@@ -118,7 +103,7 @@ export default function RelatoriosDiversos() {
     if (!selected) return;
     const f = selected.filters;
     if (f.includes('periodo') && (!filterInicio || !filterTermino)) {
-      setSnackbar({ open: true, message: 'Informe o periodo (inicio e termino).', severity: 'warning' }); return;
+      setSnackbar({ open: true, message: 'Informe o período (início e término).', severity: 'warning' }); return;
     }
     if (f.includes('uf_obrigatorio') && !filterUf) {
       setSnackbar({ open: true, message: 'Selecione uma UF.', severity: 'warning' }); return;
@@ -145,7 +130,7 @@ export default function RelatoriosDiversos() {
         setData(Array.isArray(res.data) ? res.data : []);
       }
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.response?.data?.detail || 'Erro ao gerar relatorio', severity: 'error' });
+      setSnackbar({ open: true, message: err.response?.data?.detail || 'Erro ao gerar relatório', severity: 'error' });
     } finally {
       setLoading(false);
     }
@@ -189,9 +174,9 @@ export default function RelatoriosDiversos() {
   if (!selected) {
     return (
       <PageContainer>
-        <Typography variant="h5" gutterBottom>Relatorios Diversos</Typography>
+        <Typography variant="h5" gutterBottom>Relatórios Diversos</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Selecione um relatorio para gerar. Todos os relatorios podem ser exportados em Excel e PDF.
+          Selecione um relatório para gerar. Todos os relatórios podem ser exportados em Excel e PDF.
         </Typography>
         <Divider sx={{ mb: 3 }} />
         <Grid container spacing={2}>
@@ -219,7 +204,7 @@ export default function RelatoriosDiversos() {
   return (
     <PageContainer>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Button variant="text" startIcon={<BackIcon />} onClick={() => { setSelected(null); setData([]); setResumoData(null); setFilterUf(''); setFilterCategoria(''); setFilterSituacao(''); setFilterInicio(''); setFilterTermino(''); setFilterEtapa(''); }}>
+        <Button variant="text" startIcon={<BackIcon />} onClick={() => { setSelected(null); setData([]); setResumoData(null); setFilterUf(''); setFilterCategoria(''); setFilterSituacao(''); setFilterInicio(''); setFilterTermino(''); setFilterEtapa(''); setSearchTerm(''); }}>
           Voltar
         </Button>
         <Typography variant="h5">{selected.nome}</Typography>
@@ -255,8 +240,8 @@ export default function RelatoriosDiversos() {
           {selected.filters.includes('situacao') && (
             <Grid item xs={6} sm={3}>
               <FormControl fullWidth size="small">
-                <InputLabel>Situacao</InputLabel>
-                <Select value={filterSituacao} label="Situacao" onChange={e => setFilterSituacao(e.target.value)}>
+                <InputLabel>Situação</InputLabel>
+                <Select value={filterSituacao} label="Situação" onChange={e => setFilterSituacao(e.target.value)}>
                   <MenuItem value="">Todas</MenuItem>
                   {situacoes.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                 </Select>
@@ -266,11 +251,11 @@ export default function RelatoriosDiversos() {
           {selected.filters.includes('periodo') && (
             <>
               <Grid item xs={6} sm={3}>
-                <TextField fullWidth size="small" label="Data Inicio" type="date" value={filterInicio}
+                <TextField fullWidth size="small" label="Data Início" type="date" value={filterInicio}
                   onChange={e => setFilterInicio(e.target.value)} InputLabelProps={{ shrink: true }} />
               </Grid>
               <Grid item xs={6} sm={3}>
-                <TextField fullWidth size="small" label="Data Termino" type="date" value={filterTermino}
+                <TextField fullWidth size="small" label="Data Término" type="date" value={filterTermino}
                   onChange={e => setFilterTermino(e.target.value)} InputLabelProps={{ shrink: true }} />
               </Grid>
             </>
@@ -284,10 +269,10 @@ export default function RelatoriosDiversos() {
         </Grid>
       )}
 
-      {/* Botoes */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+      {/* Botões */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
         <Button variant="contained" onClick={handleGenerate} disabled={loading}>
-          {loading ? 'Gerando...' : 'Gerar Relatorio'}
+          {loading ? 'Gerando...' : 'Gerar Relatório'}
         </Button>
         {data.length > 0 && (
           <>
@@ -297,6 +282,27 @@ export default function RelatoriosDiversos() {
             <Button variant="outlined" color="error" startIcon={<DownloadIcon />} onClick={handleExportPdf} disabled={exporting}>
               Exportar PDF
             </Button>
+            <TextField
+              size="small"
+              placeholder="Buscar na tabela..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              sx={{ ml: 'auto', minWidth: 220 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              }}
+            />
           </>
         )}
       </Box>
@@ -347,37 +353,45 @@ export default function RelatoriosDiversos() {
       )}
 
       {/* Tabela de dados */}
-      {data.length > 0 && !loading && (
-        <>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {data.length} registro(s) encontrado(s)
-          </Typography>
-          <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  {Object.keys(data[0]).map(key => (
-                    <TableCell key={key} sx={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
-                      {key.replace(/_/g, ' ')}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.map((row, idx) => (
-                  <TableRow key={idx} hover>
-                    {Object.values(row).map((val: any, cidx) => (
-                      <TableCell key={cidx}>
-                        {typeof val === 'number' ? val.toLocaleString('pt-BR') : (val ?? '-')}
+      {data.length > 0 && !loading && (() => {
+        const term = searchTerm.toLowerCase().trim();
+        const filtered = term
+          ? data.filter(row => Object.values(row).some(val => val != null && String(val).toLowerCase().includes(term)))
+          : data;
+        return (
+          <>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {filtered.length === data.length
+                ? `${data.length} registro(s) encontrado(s)`
+                : `${filtered.length} de ${data.length} registro(s)`}
+            </Typography>
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    {Object.keys(data[0]).map(key => (
+                      <TableCell key={key} sx={{ fontWeight: 'bold' }}>
+                        {formatColumnLabel(key)}
                       </TableCell>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
-      )}
+                </TableHead>
+                <TableBody>
+                  {filtered.map((row, idx) => (
+                    <TableRow key={idx} hover>
+                      {Object.values(row).map((val: any, cidx) => (
+                        <TableCell key={cidx}>
+                          {typeof val === 'number' ? val.toLocaleString('pt-BR') : (val ?? '-')}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        );
+      })()}
 
       <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
         <Alert severity={snackbar.severity}>{snackbar.message}</Alert>

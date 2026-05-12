@@ -60,7 +60,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [user]);
 
   return (
-    <div className="flex min-h-screen w-full bg-system-gray">
+    <div className="flex min-h-screen w-full" style={{ backgroundColor: '#FBF8F4' }}>
       <Sidebar
         open={sidebarOpen}
         onClose={handleDrawerToggle}

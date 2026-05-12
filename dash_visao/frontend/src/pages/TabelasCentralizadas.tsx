@@ -10,6 +10,7 @@ import {
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
+import { formatColumnLabel } from '../utils/columnLabels';
 
 const UF_LIST = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
 
@@ -96,7 +97,7 @@ export default function TabelasCentralizadas() {
             onClick={async () => {
               setExporting(true);
               try {
-                const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: k }));
+                const cols = Object.keys(resultados[0]).map(k => ({ key: k, label: formatColumnLabel(k) }));
                 const tipoNome = tipos.find(t => t.codigo === filters.tipo)?.nome || filters.tipo;
                 await exportService.exportGenericExcel({
                   data: resultados.map(r => ({ ...r })),
@@ -124,7 +125,7 @@ export default function TabelasCentralizadas() {
             <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)' }}>
               <Table stickyHeader size="small">
                 <TableHead><TableRow>
-                  {columns.map(col => <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{col}</TableCell>)}
+                  {columns.map(col => <TableCell key={col} sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{formatColumnLabel(col)}</TableCell>)}
                 </TableRow></TableHead>
                 <TableBody>
                   {resultados.map((r, i) => (

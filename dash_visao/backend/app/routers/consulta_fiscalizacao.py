@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from ..database import get_db1, get_db3
+from ..database import get_db1, get_db3, fix_row_encoding
 from ..models import User
 from ..core.auth import check_permission
 from ..lib.sql_loader import load_sql
@@ -236,7 +236,7 @@ def buscar_fiscalizacao(
         # Scripts com período (:banco, :inicio, :termino)
         elif "periodo" in required:
             if not inicio or not termino:
-                raise HTTPException(status_code=400, detail="Parâmetros 'inicio' e 'termino' são obrigatórios (YYYY-MM-DD).")
+                raise HTTPException(status_code=400, detail="Parâmetros 'início' e 'término' são obrigatórios (YYYY-MM-DD).")
             if not _DATE_RE.match(inicio) or not _DATE_RE.match(termino):
                 raise HTTPException(status_code=400, detail="Datas devem estar no formato YYYY-MM-DD.")
             cat_val = None
@@ -252,7 +252,7 @@ def buscar_fiscalizacao(
             sql = sql.replace(":banco", CFO_BR_DB)
             rows = db3.execute(text(sql)).mappings().all()
 
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return FiscalizacaoResponse(
             total=len(resultados), tipo=tipo, nome=fisc["nome"], resultados=resultados,
         )
@@ -291,7 +291,7 @@ def buscar_fiscalizacao(
     rows = db3.execute(query_sql, params).mappings().all()
 
     return FiscalizacaoResponse(
-        total=total, tipo=tipo, nome=fisc["nome"], resultados=[dict(r) for r in rows],
+        total=total, tipo=tipo, nome=fisc["nome"], resultados=[fix_row_encoding(dict(r)) for r in rows],
     )
 
 
@@ -303,10 +303,10 @@ def coordenadores_fiscalizacao(
 ):
     """Coordenadores de Fiscalização (DB1 - tbl_users subgrupo Fiscalização)"""
     query_sql = text("""
-        SELECT nome, email, grupo, subgrupo
+        SELECT name AS nome, email, grupo, subgrupo
         FROM tbl_users
         WHERE subgrupo = 'Fiscalização - Coordenação'
-        ORDER BY nome
+        ORDER BY name
     """)
     rows = db1.execute(query_sql).mappings().all()
     resultados = [dict(r) for r in rows]

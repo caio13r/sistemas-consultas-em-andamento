@@ -27,11 +27,11 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError && this.state.error) {
       return (
         <div style={{ padding: 20, textAlign: 'center', fontFamily: 'sans-serif' }}>
-          <h2 style={{ color: '#8d0f12' }}>Algo deu errado</h2>
+          <h2 style={{ color: '#7A1E26' }}>Algo deu errado</h2>
           <p>{this.state.error.message}</p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: '8px 16px', backgroundColor: '#8d0f12', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+            style={{ padding: '8px 16px', backgroundColor: '#7A1E26', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
           >
             Tentar novamente
           </button>

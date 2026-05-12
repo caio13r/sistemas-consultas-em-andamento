@@ -90,7 +90,26 @@ def _build_sqlserver_url():
 
 
 _db3_url = _build_sqlserver_url()
+
 engine_db3 = create_engine(_db3_url, pool_pre_ping=True, pool_recycle=3600, pool_size=15, max_overflow=10) if _db3_url else None
+
+
+def fix_encoding(value):
+    """Corrige double-encoding UTF-8 (dados lidos como CP1252 pelo ODBC)."""
+    if not isinstance(value, str):
+        return value
+    try:
+        fixed = value.encode('cp1252').decode('utf-8')
+        if fixed != value:
+            return fixed
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        pass
+    return value
+
+
+def fix_row_encoding(row: dict) -> dict:
+    """Aplica fix_encoding em todos os valores string de um dict."""
+    return {k: fix_encoding(v) for k, v in row.items()}
 SessionDB3 = sessionmaker(autocommit=False, autoflush=False, bind=engine_db3) if engine_db3 else None
 
 

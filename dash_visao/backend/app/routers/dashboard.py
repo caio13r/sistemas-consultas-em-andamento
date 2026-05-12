@@ -42,13 +42,19 @@ def get_dashboard_stats(
     except Exception:
         pass
 
-    # Usuarios ativos hoje (pelo log de atividade)
+    # Usuarios que fizeram login hoje (POST /auth/token com sucesso)
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     active_today = 0
     try:
         active_today = (
             db.query(func.count(func.distinct(ActivityLog.username)))
-            .filter(ActivityLog.created_at >= today_start, ActivityLog.username.isnot(None))
+            .filter(
+                ActivityLog.created_at >= today_start,
+                ActivityLog.username.isnot(None),
+                ActivityLog.method == "POST",
+                ActivityLog.path.like("%/token"),
+                ActivityLog.status_code == 200,
+            )
             .scalar() or 0
         )
     except Exception:

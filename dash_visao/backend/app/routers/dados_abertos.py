@@ -62,6 +62,9 @@ def _fetch_api(endpoint: str, params: dict = None) -> list:
         )
 
     url = f"{API_BASE_URL}/{endpoint}"
+    if params:
+        qs = "&".join(f"{k}={v}" for k, v in params.items())
+        url = f"{url}?{qs}"
     headers = {
         "Accept": "application/json, text/json",
         "Chave": API_KEY,
@@ -69,7 +72,12 @@ def _fetch_api(endpoint: str, params: dict = None) -> list:
     }
 
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=30)
+        logger.info("DADOS_ABERTOS REQUEST: %s", url)
+        logger.info("DADOS_ABERTOS HEADERS: %s", {k: v[:8] + '...' if k in ('Chave', 'Senha') else v for k, v in headers.items()})
+        response = requests.get(url, headers=headers, timeout=30)
+        logger.info("DADOS_ABERTOS RESPONSE: status=%s body=%s", response.status_code, response.text[:500])
+        if response.status_code == 404:
+            return []
         response.raise_for_status()
         data = response.json()
         return data if isinstance(data, list) else data.get("data", data.get("resultados", []))
@@ -118,19 +126,19 @@ def buscar_dados_abertos(
 
     if date_param == "referencia":
         if not data_inicio or not data_termino:
-            raise HTTPException(status_code=400, detail="Informe data_inicio e data_termino (formato MM/YYYY)")
+            raise HTTPException(status_code=400, detail="Informe data_início e data_término (formato MM/YYYY)")
         params["referenciaInicio"] = data_inicio
         params["referenciaTermino"] = data_termino
 
     elif date_param == "vigencia":
         if not data_inicio or not data_termino:
-            raise HTTPException(status_code=400, detail="Informe data_inicio e data_termino (formato MM/YYYY)")
+            raise HTTPException(status_code=400, detail="Informe data_início e data_término (formato MM/YYYY)")
         params["vigenciaInicio"] = data_inicio
         params["vigenciaTermino"] = data_termino
 
     elif date_param == "data":
         if not data_inicio or not data_termino:
-            raise HTTPException(status_code=400, detail="Informe data_inicio e data_termino (formato MM/YYYY)")
+            raise HTTPException(status_code=400, detail="Informe data_início e data_término (formato MM/YYYY)")
         params["dataInicio"] = data_inicio
         params["dataTermino"] = data_termino
 

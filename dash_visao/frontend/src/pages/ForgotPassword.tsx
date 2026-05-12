@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, MapPin, Phone, Mail as MailIcon } from 'lucide-react';
+import logoCfo from '../assets/logo.png';
 import axios from 'axios';
 
 const ForgotPassword: React.FC = () => {
@@ -25,97 +26,220 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Bar */}
-      <div className="bg-[#8d0f12] text-white py-2">
+    <div className="min-h-screen flex flex-col relative" style={{ backgroundColor: '#FBF8F4' }}>
+      {/* Mesh grid background */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          zIndex: 0,
+          backgroundImage: `
+            linear-gradient(rgba(122,30,38,0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(122,30,38,0.06) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+        }}
+      />
+
+      {/* Topbar institucional */}
+      <div
+        className="text-white/90 py-2"
+        style={{ background: 'linear-gradient(90deg, #5C1519 0%, #7A1E26 100%)', position: 'relative', zIndex: 1 }}
+      >
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center text-sm">
-            <span>Sistema de Consultas - Conselho Federal de Odontologia</span>
+          <div className="flex flex-col md:flex-row justify-between items-center text-xs tracking-wide font-body">
+            <div className="flex flex-wrap items-center gap-5 mb-1.5 md:mb-0">
+              <div className="flex items-center gap-1.5">
+                <MapPin size={12} className="opacity-70" />
+                <span className="hidden md:inline">Brasilia - DF</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Phone size={12} className="opacity-70" />
+                <span className="hidden md:inline">(61) 3033-4499 / 3033-4469</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MailIcon size={12} className="opacity-70" />
+                <span className="hidden md:inline">cfo@cfo.org.br</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Header */}
-      <header className="bg-[#F6F6F6] border-b border-[#E8E8E8] py-6">
-        <div className="container mx-auto px-4">
+      <header
+        className="py-3"
+        style={{
+          backgroundColor: '#F5EDE0',
+          borderBottom: '1px solid rgba(122,30,38,0.1)',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <div className="w-full max-w-[420px] mx-auto px-5 md:px-6">
           <div className="flex items-center">
-            <div className="bg-white p-3 rounded-lg shadow-sm">
-              <div className="w-12 h-12 bg-[#8d0f12] rounded flex items-center justify-center">
-                <span className="text-white font-bold text-xl">CFO</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <h1 className="text-xl font-bold text-gray-800">Sistema de Consultas</h1>
-              <p className="text-sm text-gray-600">Conselho Federal de Odontologia</p>
+            <img src={logoCfo} alt="CFO" className="h-8 w-auto object-contain" />
+            <div className="mx-2.5" style={{ width: '2px', height: '28px', backgroundColor: 'rgba(122,30,38,0.2)', borderRadius: '1px', flexShrink: 0 }} />
+            <div>
+              <h1
+                className="tracking-tight font-display"
+                style={{ color: '#0A0506', fontWeight: 400, fontSize: 'clamp(16px, 2vw, 20px)' }}
+              >
+                Vis&atilde;o CFO
+              </h1>
+              <p className="eyebrow" style={{ fontSize: '8px', letterSpacing: '0.18em', whiteSpace: 'nowrap' }}>
+                Sistema de integração geral de dados
+              </p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-grow container mx-auto px-4 py-12 flex items-center justify-center">
-        <div className="max-w-md w-full">
-          <div className="bg-white shadow-lg rounded-lg border-0">
-            <div className="p-8">
+      {/* Main */}
+      <main className="flex-grow flex items-center justify-center px-4 py-10" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="w-full max-w-[420px]">
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              backgroundColor: '#fff',
+              boxShadow: '0 4px 24px rgba(122,30,38,0.06)',
+              border: '1px solid rgba(122,30,38,0.08)',
+            }}
+          >
+            {/* Card accent */}
+            <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #5C1519, #7A1E26, #9A2832, #7A1E26, #5C1519)' }} />
+
+            <div className="p-8 md:p-10">
               {sent ? (
                 <div className="text-center">
-                  <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">Email Enviado!</h2>
-                  <p className="text-gray-600 mb-6">
+                  <div
+                    className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+                    style={{ background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)' }}
+                  >
+                    <CheckCircle size={28} className="text-white" />
+                  </div>
+                  <h2
+                    className="font-display tracking-tight mb-2"
+                    style={{ fontSize: 'clamp(24px, 4vw, 32px)', color: '#0A0506', fontWeight: 400 }}
+                  >
+                    Email Enviado!
+                  </h2>
+                  <p className="text-sm mb-8" style={{ color: 'rgba(20,10,12,0.5)' }}>
                     Se o email informado estiver cadastrado no sistema, voce recebera um link
                     para redefinir sua senha. Verifique sua caixa de entrada e pasta de spam.
                   </p>
                   <Link
                     to="/login"
-                    className="inline-flex items-center gap-2 text-[#8d0f12] hover:underline font-medium"
+                    className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+                    style={{ color: '#7A1E26' }}
                   >
-                    <ArrowLeft size={18} />
+                    <ArrowLeft size={16} />
                     Voltar para o Login
                   </Link>
                 </div>
               ) : (
                 <>
-                  <div className="text-center mb-6">
-                    <Mail size={48} className="mx-auto text-[#8d0f12] mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Esqueci minha senha</h2>
-                    <p className="text-gray-600">
-                      Informe o email cadastrado na sua conta para receber o link de recuperacao.
+                  {/* Title */}
+                  <div className="text-center mb-8">
+                    <div
+                      className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+                      style={{ background: 'linear-gradient(135deg, #7A1E26 0%, #9A2832 100%)' }}
+                    >
+                      <Mail size={28} className="text-white" />
+                    </div>
+                    <h2
+                      className="font-display tracking-tight"
+                      style={{ fontSize: 'clamp(24px, 4vw, 32px)', color: '#0A0506', fontWeight: 400 }}
+                    >
+                      Esqueci minha senha
+                    </h2>
+                    <p className="text-sm mt-1.5" style={{ color: 'rgba(20,10,12,0.5)' }}>
+                      Informe o email cadastrado para receber o link de recuperacao
                     </p>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                        Email
+                  {/* Form */}
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                      <label
+                        htmlFor="email"
+                        className="block text-xs font-semibold uppercase mb-1.5"
+                        style={{ color: 'rgba(20,10,12,0.5)', letterSpacing: '0.12em' }}
+                      >
+                        E-mail
                       </label>
                       <input
                         id="email"
                         type="email"
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#8d0f12] focus:border-transparent"
+                        autoComplete="email"
+                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                        style={{
+                          backgroundColor: '#FBF8F4',
+                          border: '1px solid rgba(122,30,38,0.12)',
+                          color: '#0A0506',
+                          outline: 'none',
+                        }}
+                        onFocus={e => {
+                          e.target.style.borderColor = '#7A1E26';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(122,30,38,0.08)';
+                          e.target.style.backgroundColor = '#fff';
+                        }}
+                        onBlur={e => {
+                          e.target.style.borderColor = 'rgba(122,30,38,0.12)';
+                          e.target.style.boxShadow = 'none';
+                          e.target.style.backgroundColor = '#FBF8F4';
+                        }}
                         placeholder="seu.email@exemplo.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
 
+                    {/* Error */}
                     {error && (
-                      <div className="text-red-500 text-sm text-center">{error}</div>
+                      <div
+                        className="flex items-center gap-2 px-4 py-3 rounded-xl"
+                        style={{ backgroundColor: 'rgba(200,57,63,0.06)', border: '1px solid rgba(200,57,63,0.15)' }}
+                      >
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#C8393F' }} />
+                        <p className="text-sm font-medium" style={{ color: '#C8393F' }}>{error}</p>
+                      </div>
                     )}
 
+                    {/* Submit */}
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-[#8d0f12] hover:bg-[#7a0d10] text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl text-white font-semibold text-sm
+                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                      style={{
+                        background: loading ? '#6D6E71' : 'linear-gradient(135deg, #7A1E26 0%, #9A2832 100%)',
+                        boxShadow: loading ? 'none' : '0 4px 14px rgba(122,30,38,0.25)',
+                      }}
                     >
-                      {loading ? 'Enviando...' : 'Enviar Link de Recuperacao'}
+                      {loading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mail size={18} />
+                          <span>Enviar Link de Recuperacao</span>
+                        </>
+                      )}
                     </button>
                   </form>
 
-                  <div className="mt-6 text-center">
+                  {/* Back to login */}
+                  <div className="mt-8 text-center">
                     <Link
                       to="/login"
-                      className="inline-flex items-center gap-2 text-sm text-[#8d0f12] hover:underline"
+                      className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+                      style={{ color: '#7A1E26' }}
                     >
                       <ArrowLeft size={16} />
                       Voltar para o Login
@@ -129,9 +253,25 @@ const ForgotPassword: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#8d0f12] text-white py-6">
+      <footer
+        className="text-white py-6"
+        style={{
+          background: 'linear-gradient(90deg, #5C1519 0%, #7A1E26 50%, #5C1519 100%)',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         <div className="container mx-auto px-4 text-center">
-          <p className="text-sm">Copyright &copy; 2025 CFO (Conselho Federal de Odontologia)</p>
+          <p className="text-xs font-medium mb-1.5 opacity-90">
+            &copy; {new Date().getFullYear()} CFO — Conselho Federal de Odontologia
+          </p>
+          <p className="text-xs opacity-50 leading-relaxed">
+            Lote 2, Quadra CA-07, Centro de Atividades do Setor de Habitacoes
+            Individuais Norte Lago Norte, Brasilia – DF, CEP: 71.503-507
+          </p>
+          <p className="text-xs opacity-50 mt-1">
+            Atendimento: Segunda a sexta, 08:00 as 17:00
+          </p>
         </div>
       </footer>
     </div>

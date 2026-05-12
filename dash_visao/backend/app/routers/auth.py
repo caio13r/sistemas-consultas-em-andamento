@@ -28,10 +28,16 @@ def login_for_access_token(
     user = db.query(User).filter(
         (User.email == form_data.username) | (User.username == form_data.username)
     ).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="E-mail ou senha incorretos",
+            detail="E-mail não encontrado no sistema",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Senha incorreta",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -104,7 +110,10 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
     db.commit()
 
     # Envia email
-    send_password_reset_email(user.email, user.full_name or user.username, token)
+    try:
+        send_password_reset_email(user.email, user.full_name or user.username, token)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Se o email estiver cadastrado, voce recebera um link de recuperacao."}
 
@@ -120,7 +129,7 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     if not reset_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token invalido ou ja utilizado."
+            detail="Token inválido ou já utilizado."
         )
 
     if reset_token.expires_at < datetime.now(timezone.utc):

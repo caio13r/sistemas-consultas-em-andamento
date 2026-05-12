@@ -1,12 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════
+   Design System CFO — Manual de Identidade 2014
+   ═══════════════════════════════════════════════ */
+
 :root {
-  font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  line-height: 1.5;
+  /* ── Bordô (escala completa) ── */
+  --burgundy-500: #9A2832;
+  --burgundy-600: #7A1E26;   /* Marca principal (oficial) */
+  --burgundy-700: #5C1519;
+  --burgundy-800: #3D0E10;
+  --burgundy-900: #2A0B0D;
+  --cfo-bar:      #8B1D23;
+
+  /* ── Creme (background quente) ── */
+  --cream-50:  #FBF8F4;
+  --cream-100: #F5EDE0;
+  --cream-200: #EADDCB;
+
+  /* ── Dourado (acento elegante) ── */
+  --gold-400: #D4A574;
+  --gold-500: #B88A56;
+
+  /* ── Funcionais ── */
+  --amber:    #F7C437;
+  --green:    #2F7D4F;
+  --red:      #C8393F;
+  --blue-ink: #1E4A7A;
+
+  /* ── Tinta (texto) ── */
+  --ink-900: #0A0506;
+  --ink-700: rgba(20, 10, 12, 0.70);
+  --ink-500: rgba(20, 10, 12, 0.50);
+
+  /* ── Cinza CFO ── */
+  --gray-cfo: #6D6E71;
+
+  /* ── Tipografia ── */
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-body:    'Geist', 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* ── Root font ── */
+  font-family: var(--font-body);
+  line-height: 1.55;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -17,11 +56,11 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #F4F5F7;
-  color: #1C2024;
+  background-color: var(--cream-50);
+  color: var(--ink-900);
 }
 
-/* Scrollbar sutil */
+/* ── Scrollbar sutil ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -30,31 +69,50 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.15);
+  background: rgba(122, 30, 38, 0.15);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0,0,0,0.25);
+  background: rgba(122, 30, 38, 0.25);
 }
 
-/* Tabelas dentro de TableContainer - scrollbar */
+/* MUI TableContainer scrollbar */
 .MuiTableContainer-root::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .MuiTableContainer-root::-webkit-scrollbar-thumb {
-  background: rgba(141,15,18,0.15);
+  background: rgba(122, 30, 38, 0.15);
   border-radius: 3px;
 }
 
-/* Transicoes suaves globais */
+/* ── Links ── */
 a {
   text-decoration: none;
   transition: color 0.15s ease;
 }
 
-/* Focus ring acessivel */
+/* ── Focus ring acessivel ── */
 *:focus-visible {
-  outline: 2px solid #8D0F12;
+  outline: 2px solid var(--burgundy-600);
   outline-offset: 2px;
+}
+
+/* ── Tipografia display (Instrument Serif) ── */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* ── Tipografia mono ── */
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Eyebrow institucional ── */
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-500);
 }

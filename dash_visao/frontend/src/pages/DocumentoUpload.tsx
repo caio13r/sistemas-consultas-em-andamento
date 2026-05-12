@@ -148,7 +148,7 @@ const DocumentoUpload: React.FC = () => {
           onClick={() => fileInputRef.current?.click()}
           sx={{
             border: '2px dashed',
-            borderColor: dragOver ? '#8D0F12' : '#ccc',
+            borderColor: dragOver ? '#7A1E26' : '#ccc',
             borderRadius: 2,
             p: 4,
             textAlign: 'center',
@@ -156,7 +156,7 @@ const DocumentoUpload: React.FC = () => {
             backgroundColor: dragOver ? 'rgba(141,15,18,0.04)' : '#fafafa',
             transition: 'all 0.2s',
             mb: 3,
-            '&:hover': { borderColor: '#8D0F12', backgroundColor: 'rgba(141,15,18,0.02)' },
+            '&:hover': { borderColor: '#7A1E26', backgroundColor: 'rgba(141,15,18,0.02)' },
           }}
         >
           <input
@@ -169,7 +169,7 @@ const DocumentoUpload: React.FC = () => {
               if (f) handleFileSelect(f);
             }}
           />
-          <UploadIcon sx={{ fontSize: 48, color: dragOver ? '#8D0F12' : '#999', mb: 1 }} />
+          <UploadIcon sx={{ fontSize: 48, color: dragOver ? '#7A1E26' : '#999', mb: 1 }} />
           <Typography variant="body1" sx={{ fontWeight: 500 }}>
             Arraste um arquivo aqui ou clique para selecionar
           </Typography>
@@ -181,7 +181,7 @@ const DocumentoUpload: React.FC = () => {
         {/* File Preview */}
         {file && (
           <Paper variant="outlined" sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FileIcon sx={{ color: '#8D0F12', fontSize: 36 }} />
+            <FileIcon sx={{ color: '#7A1E26', fontSize: 36 }} />
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>{file.name}</Typography>
               <Typography variant="caption" color="text.secondary">

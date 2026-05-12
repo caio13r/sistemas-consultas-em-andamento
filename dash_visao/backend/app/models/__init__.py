@@ -7,3 +7,7 @@ from .password_reset import PasswordResetToken
 from .activity_log import ActivityLog
 from .documento import Documento
 from .change_log import ChangeLog
+from .monitor_config import MonitorConfig
+from .backup_config import BackupConfig
+from .backup_history import BackupHistory
+from .contato_fiscalizacao import ContatoFiscalizacao

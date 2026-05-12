@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional, List
-from ..database import get_db3
+from ..database import get_db3, fix_row_encoding
 from ..models import User
 from ..core.auth import check_permission
 from pydantic import BaseModel
@@ -113,7 +113,7 @@ def buscar_eleicoes(
             ORDER BY ele.NOME_COMPLETO, ele.CRO, ele.INSCRICAO
         """)
         rows = db3.execute(sql, params).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return EleicaoResponse(
             total=len(resultados), tipo=tipo, nome=tipo_info["nome"], resultados=resultados,
         )
@@ -134,7 +134,7 @@ def buscar_eleicoes(
             GROUP BY CRO ORDER BY CRO
         """)
         rows = db3.execute(sql_cro).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
 
         return EleicaoResponse(
             total=len(resultados), tipo=tipo, nome=tipo_info["nome"], resultados=resultados,
@@ -171,7 +171,7 @@ def buscar_eleicoes(
             ORDER BY e.CPF, e.CRO
         """)
         rows = db3.execute(sql, params).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return EleicaoResponse(
             total=len(resultados), tipo=tipo, nome=tipo_info["nome"], resultados=resultados,
         )
@@ -196,7 +196,7 @@ def buscar_eleicoes(
             ORDER BY e.CRO, e.NOME_COMPLETO, e.INSCRICAO
         """)
         rows = db3.execute(sql, params).mappings().all()
-        resultados = [dict(r) for r in rows]
+        resultados = [fix_row_encoding(dict(r)) for r in rows]
         return EleicaoResponse(
             total=len(resultados), tipo=tipo, nome=tipo_info["nome"], resultados=resultados,
         )
