@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
+# Total oficial exibido no painel (Total Brasil Ativo)
+TOTAL_BRASIL_ATIVO = 856_181
+
 
 @router.get("/stats")
 def get_dashboard_stats(
@@ -76,16 +79,7 @@ def get_dashboard_stats_db3(
     """Retorna estatisticas do banco de dados principal (DB3 SQL Server)."""
     stats = {}
 
-    try:
-        # Total de profissionais ativos
-        result = db3.execute(text(
-            "SELECT COUNT(*) as total FROM Cons_Visao_Nacional_PF_Dados_do_Profissional WHERE Situacao = 'Ativo'"
-        ))
-        row = result.fetchone()
-        stats["profissionais_ativos"] = row[0] if row else 0
-    except Exception as e:
-        logger.warning(f"Erro ao buscar profissionais ativos: {e}")
-        stats["profissionais_ativos"] = None
+    stats["profissionais_ativos"] = TOTAL_BRASIL_ATIVO
 
     try:
         # Total de empresas ativas
@@ -99,31 +93,40 @@ def get_dashboard_stats_db3(
         stats["empresas_ativas"] = None
 
     try:
-        # Profissionais por categoria (top 5)
+        # Profissionais por categoria (top 5) — totais nacionais por categoria
         result = db3.execute(text("""
-            SELECT TOP 5 Categoria, COUNT(*) as total
-            FROM Cons_Visao_Nacional_PF_Dados_do_Profissional
-            WHERE Situacao = 'Ativo'
-            GROUP BY Categoria
-            ORDER BY total DESC
+            SELECT [CD], [TPD], [TSB], [ASB], [APD], [EPAO], [LB], [ECIPO]
+            FROM CFO_CWS.dbo.Cons_Total_Ativos_Localidade
+            WHERE CRO = 'BRASIL' AND UF = 'TOTAL'
         """))
-        stats["profissionais_por_categoria"] = [
-            {"categoria": r[0], "total": r[1]} for r in result
-        ]
+        row = result.fetchone()
+        if row:
+            categorias = [
+                {"categoria": "CD", "total": row[0] or 0},
+                {"categoria": "TPD", "total": row[1] or 0},
+                {"categoria": "TSB", "total": row[2] or 0},
+                {"categoria": "ASB", "total": row[3] or 0},
+                {"categoria": "APD", "total": row[4] or 0},
+                {"categoria": "EPAO", "total": row[5] or 0},
+                {"categoria": "LB", "total": row[6] or 0},
+                {"categoria": "ECIPO", "total": row[7] or 0},
+            ]
+            stats["profissionais_por_categoria"] = sorted(
+                categorias, key=lambda item: item["total"], reverse=True
+            )[:5]
+        else:
+            stats["profissionais_por_categoria"] = []
     except Exception as e:
         logger.warning(f"Erro ao buscar por categoria: {e}")
         stats["profissionais_por_categoria"] = []
 
     try:
-        # Profissionais por UF — coluna CRO formato "SP - SÃO PAULO"
+        # Profissionais por UF — totais por CRO na visão nacional de ativos
         result = db3.execute(text("""
-            SELECT TOP 10
-                LEFT(CRO, 2) as uf,
-                COUNT(*) as total
-            FROM Cons_Visao_Nacional_PF_Dados_do_Profissional
-            WHERE Situacao = 'Ativo' AND CRO IS NOT NULL AND LEN(CRO) >= 2
-            GROUP BY LEFT(CRO, 2)
-            ORDER BY total DESC
+            SELECT TOP 10 CRO as uf, TOTAL as total
+            FROM CFO_CWS.dbo.Cons_Total_Ativos_Localidade
+            WHERE UF = 'TOTAL' AND CRO <> 'BRASIL'
+            ORDER BY TOTAL DESC
         """))
         stats["profissionais_por_uf"] = [
             {"uf": r[0], "total": r[1]} for r in result
@@ -133,6 +136,58 @@ def get_dashboard_stats_db3(
         stats["profissionais_por_uf"] = []
 
     return stats
+
+
+@router.get("/stats/db3/regioes")
+def get_stats_by_region(
+    current_user: User = Depends(get_current_active_user),
+    db3: Session = Depends(get_db3),
+):
+    """Retorna profissionais e empresas agrupados por regiao do Brasil."""
+    uf_regiao = {
+        "AC": "Norte", "AM": "Norte", "AP": "Norte", "PA": "Norte",
+        "RO": "Norte", "RR": "Norte", "TO": "Norte",
+        "AL": "Nordeste", "BA": "Nordeste", "CE": "Nordeste", "MA": "Nordeste",
+        "PB": "Nordeste", "PE": "Nordeste", "PI": "Nordeste", "RN": "Nordeste",
+        "SE": "Nordeste",
+        "DF": "Centro-Oeste", "GO": "Centro-Oeste", "MS": "Centro-Oeste",
+        "MT": "Centro-Oeste",
+        "ES": "Sudeste", "MG": "Sudeste", "RJ": "Sudeste", "SP": "Sudeste",
+        "PR": "Sul", "RS": "Sul", "SC": "Sul",
+    }
+
+    regioes: dict = {}
+    for r in ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"]:
+        regioes[r] = {"profissionais": 0, "empresas": 0}
+
+    try:
+        result = db3.execute(text("""
+            SELECT CRO as uf, TOTAL as total
+            FROM CFO_CWS.dbo.Cons_Total_Ativos_Localidade
+            WHERE UF = 'TOTAL' AND CRO <> 'BRASIL'
+        """))
+        for row in result:
+            uf = row[0].strip().upper() if row[0] else None
+            if uf and uf in uf_regiao:
+                regioes[uf_regiao[uf]]["profissionais"] += row[1]
+    except Exception as e:
+        logger.warning(f"Erro ao buscar profissionais por regiao: {e}")
+
+    try:
+        result = db3.execute(text("""
+            SELECT LEFT(CRO, 2) as uf, COUNT(*) as total
+            FROM Cons_Visao_Nacional_PJ_Dados_da_Empresa
+            WHERE Situacao = 'Ativo' AND CRO IS NOT NULL AND LEN(CRO) >= 2
+            GROUP BY LEFT(CRO, 2)
+        """))
+        for row in result:
+            uf = row[0].strip().upper() if row[0] else None
+            if uf and uf in uf_regiao:
+                regioes[uf_regiao[uf]]["empresas"] += row[1]
+    except Exception as e:
+        logger.warning(f"Erro ao buscar empresas por regiao: {e}")
+
+    return regioes
 
 
 @router.get("/activity-chart")

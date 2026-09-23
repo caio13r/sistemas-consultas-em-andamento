@@ -11,6 +11,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    role_ids: List[int] = []
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None

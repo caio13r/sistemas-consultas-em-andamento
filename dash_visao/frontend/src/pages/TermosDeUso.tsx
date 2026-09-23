@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import AuthLoadingScreen from '../components/AuthLoadingScreen';
 import logoCfo from '../assets/logo.png';
 import brasao from '../assets/brasao.png';
 import {
@@ -14,11 +15,6 @@ const TermosDeUso: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { acceptTerms, isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    navigate('/login', { replace: true });
-    return null;
-  }
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -39,6 +35,10 @@ const TermosDeUso: React.FC = () => {
   };
 
   return (
+    <AuthLoadingScreen>
+      {!isAuthenticated ? (
+        <Navigate to="/login" replace />
+      ) : (
     <div className="min-h-screen flex flex-col relative" style={{ backgroundColor: '#FBF8F4' }}>
       {/* Mesh grid background */}
       <div
@@ -291,6 +291,8 @@ const TermosDeUso: React.FC = () => {
         </div>
       </footer>
     </div>
+      )}
+    </AuthLoadingScreen>
   );
 };
 

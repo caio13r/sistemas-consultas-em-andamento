@@ -76,7 +76,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   permissions: 'Permissões',
   menus: 'Menus',
   auditorias: 'Auditorias',
-  consulta_integrada: 'Consulta Integrada',
+  consulta_integrada: 'Visão integrada',
   consulta_auditoria: 'Consulta Auditoria',
   consulta_prescricao: 'Consulta Prescrição',
   relatorio_adimplencia: 'Relatório Adimplência',

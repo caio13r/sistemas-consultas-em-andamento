@@ -45,7 +45,7 @@ export default function ConsultaRFB() {
 
   return (
     <PageContainer>
-      <Typography variant="h5" gutterBottom>Consulta RFB</Typography>
+      <Typography variant="h5" gutterBottom>Visão RFB</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Verificação de CPF/CNPJ na base do CFO com registro de auditoria.
       </Typography>
@@ -143,7 +143,7 @@ export default function ConsultaRFB() {
                         { key: 'nome_cfo', label: 'Nome CFO' },
                         { key: 'data_hora', label: 'Data/Hora' },
                       ],
-                      title: 'Consulta RFB - Historico',
+                      title: 'Visão RFB - Historico',
                       filename: 'consulta_rfb_historico',
                     });
                     setSnackbar({ open: true, message: 'Excel exportado com sucesso!', severity: 'success' });

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Typography, Box, TextField, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, CircularProgress, Snackbar, Alert,
   Grid, FormControl, InputLabel, Select, MenuItem, Chip, IconButton,
   Tooltip, Divider, Tabs, Tab, Paper,
 } from '@mui/material';
-import { Search as SearchIcon, Clear as ClearIcon, Visibility as ViewIcon, Print as PrintIcon, FileDownload as DownloadIcon } from '@mui/icons-material';
+import {
+  Search as SearchIcon, Clear as ClearIcon, Visibility as ViewIcon,
+  FileDownload as DownloadIcon,
+} from '@mui/icons-material';
 import PageContainer from '../components/PageContainer';
 import api from '../services/api';
 import { exportService } from '../services/exportService';
@@ -16,6 +20,7 @@ interface Profissional {
   cro: string | null;
   categoria: string | null;
   inscricao: string | null;
+  data_inscricao: string | null;
   tipo_inscricao: string | null;
   situacao: string | null;
   detalhe: string | null;
@@ -63,6 +68,7 @@ const situacaoColor: Record<string, 'success' | 'error' | 'warning' | 'default'>
 };
 
 export default function ConsultaIntegrada() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [filters, setFilters] = useState({
     nome: '', inscricao: '', cpf: '', email: '', telefone: '', cro: '', categoria: '', cnpj: '',
@@ -72,8 +78,6 @@ export default function ConsultaIntegrada() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [detailOpen, setDetailOpen] = useState<any>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' as any });
   const [exporting, setExporting] = useState(false);
 
@@ -103,45 +107,12 @@ export default function ConsultaIntegrada() {
 
   const handleClear = () => {
     setFilters({ nome: '', inscricao: '', cpf: '', email: '', telefone: '', cro: '', categoria: '', cnpj: '' });
-    setResultadosPF([]); setResultadosPJ([]); setTotal(0); setSearched(false); setDetailOpen(null);
-  };
-
-  const handleViewDetail = async (idRegistro: string | number) => {
-    setDetailLoading(true);
-    try {
-      const res = await api.get(`/consulta-integrada/profissionais/${idRegistro}`);
-      setDetailOpen(res.data);
-    } catch (e: any) {
-      setSnackbar({ open: true, message: 'Erro ao carregar detalhes', severity: 'error' });
-    } finally { setDetailLoading(false); }
-  };
-
-  const handlePrint = () => {
-    const printEl = document.getElementById('modal-detail-print');
-    if (!printEl) return;
-    const win = window.open('', '_blank');
-    if (!win) {
-      setSnackbar({ open: true, message: 'Permita pop-ups para imprimir.', severity: 'warning' });
-      return;
-    }
-    const lgpdPrint = '<div class="lgpd" style="background:#e3f2fd;padding:10px;margin-bottom:15px;border-left:4px solid #1976d2;font-size:11px;"><strong>Aviso LGPD:</strong> Os dados exibidos são de uso restrito (Lei 13.709/2018). O usuário é responsável pelo uso das informações consultadas.</div>';
-    win.document.write(`
-      <html><head><title>Detalhes do Profissional</title>
-      <style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px;}
-      .lgpd{background:#e3f2fd;padding:10px;margin-bottom:15px;border-left:4px solid #1976d2;font-size:11px;}
-      .section{font-weight:bold;margin-top:15px;margin-bottom:5px;}
-      .MuiTypography-subtitle2{color:#666;font-size:11px;}
-      .MuiTypography-body2{margin-bottom:8px;}</style>
-      </head><body>${lgpdPrint}${printEl.innerHTML}</body></html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 250);
+    setResultadosPF([]); setResultadosPJ([]); setTotal(0); setSearched(false);
   };
 
   return (
     <PageContainer>
-      <Typography variant="h5" gutterBottom>Consulta Integrada - Visão Nacional</Typography>
+      <Typography variant="h5" gutterBottom>Visão integrada — Visão Nacional</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Quanto mais preciso os dados de busca, melhor e mais rápido será o resultado. Máximo 2000 resultados.
       </Typography>
@@ -206,7 +177,8 @@ export default function ConsultaIntegrada() {
                   ? [
                       { key: 'nome', label: 'Nome' }, { key: 'cpf', label: 'CPF' },
                       { key: 'cro', label: 'CRO' }, { key: 'categoria', label: 'Categoria' },
-                      { key: 'inscricao', label: 'Inscrição' }, { key: 'tipo_inscricao', label: 'Tipo' },
+                      { key: 'inscricao', label: 'Inscrição' }, { key: 'data_inscricao', label: 'Data da Inscrição' },
+                      { key: 'tipo_inscricao', label: 'Tipo' },
                       { key: 'situacao', label: 'Situação' }, { key: 'situacao_financeira', label: 'Sit. Financeira' },
                     ]
                   : [
@@ -218,7 +190,7 @@ export default function ConsultaIntegrada() {
                 await exportService.exportGenericExcel({
                   data,
                   columns,
-                  title: tab === 0 ? 'Consulta Integrada - Profissionais' : 'Consulta Integrada - Empresas',
+                  title: tab === 0 ? 'Visão integrada - Profissionais' : 'Visão integrada - Empresas',
                   filename: tab === 0 ? 'consulta_integrada_pf' : 'consulta_integrada_pj',
                 });
                 setSnackbar({ open: true, message: 'Excel exportado com sucesso!', severity: 'success' });
@@ -250,6 +222,7 @@ export default function ConsultaIntegrada() {
                   <TableCell sx={{ fontWeight: 'bold' }}>CRO</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Categoria</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Inscrição</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Data da Inscrição</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>CPF</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Situação</TableCell>
@@ -263,6 +236,7 @@ export default function ConsultaIntegrada() {
                       <TableCell>{p.cro || '-'}</TableCell>
                       <TableCell>{p.categoria || '-'}</TableCell>
                       <TableCell>{p.inscricao || '-'}</TableCell>
+                      <TableCell>{p.data_inscricao || '-'}</TableCell>
                       <TableCell>{p.cpf || '-'}</TableCell>
                       <TableCell>{p.tipo_inscricao || '-'}</TableCell>
                       <TableCell><Chip label={p.situacao || '-'} color={situacaoColor[p.situacao || ''] || 'default'} size="small" variant="outlined" /></TableCell>
@@ -270,7 +244,7 @@ export default function ConsultaIntegrada() {
                       <TableCell align="center">
                         {p.id_registro && (
                           <Tooltip title="Ver detalhes">
-                            <IconButton size="small" color="primary" onClick={() => handleViewDetail(p.id_registro!)}>
+                            <IconButton size="small" color="primary" onClick={() => navigate(`/consulta-integrada/profissional/${p.id_registro}`)}>
                               <ViewIcon />
                             </IconButton>
                           </Tooltip>
@@ -317,178 +291,6 @@ export default function ConsultaIntegrada() {
         </>
       )}
 
-      {/* Modal de detalhes PF */}
-      {detailOpen && (
-        <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={() => setDetailOpen(null)}>
-          <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 4, maxWidth: 750, width: '90%', maxHeight: '85vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
-            <Typography variant="h6" gutterBottom>Detalhes do Profissional</Typography>
-
-            {/* Aviso LGPD */}
-            <Box sx={{ bgcolor: 'info.light', color: 'info.contrastText', p: 1.5, borderRadius: 1, mb: 2, borderLeft: '4px solid', borderColor: 'primary.main' }}>
-              <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>Aviso de Responsabilidade - LGPD</Typography>
-              <Typography variant="caption">
-                Os dados exibidos são de uso restrito e devem ser utilizados em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018). 
-                O acesso indevido, divulgação não autorizada ou uso inadequado das informações pode constituir infração administrativa e crime. 
-                O usuário é o único responsável pelo uso dos dados consultados.
-              </Typography>
-            </Box>
-
-            <Divider sx={{ mb: 2 }} />
-
-            {detailLoading ? <CircularProgress /> : (
-              <Box id="modal-detail-print">
-                {/* 1. Dados do Profissional */}
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1.5 }}>Dados do Profissional</Typography>
-                  <Grid container spacing={2}>
-                    {[
-                      ['Nome', detailOpen.nome], ['CRO', detailOpen.cro], ['Categoria', detailOpen.categoria], ['Inscrição', detailOpen.inscricao],
-                      ['CPF', detailOpen.cpf], ['Tipo de Inscrição', detailOpen.tipo_inscricao], ['Situação', detailOpen.situacao], ['Detalhe', detailOpen.detalhe],
-                      ['Situação Financeira', detailOpen.situacao_financeira],
-                    ].map(([label, value], i) => (
-                      <Grid item xs={6} sm={4} key={i}>
-                        <Typography variant="caption" color="text.secondary" component="div">{label}</Typography>
-                        <Typography variant="body2">{value || '-'}</Typography>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Paper>
-
-                {/* 2. Dados Pessoais */}
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1.5 }}>Dados Pessoais</Typography>
-                  <Grid container spacing={2}>
-                    {[
-                      ['Data de Nascimento', detailOpen.data_nascimento], ['CPF', detailOpen.cpf], ['Gênero', detailOpen.genero],
-                      ['Estado Civil', detailOpen.estado_civil], ['Naturalidade', detailOpen.naturalidade], ['Nacionalidade', detailOpen.nacionalidade],
-                      ['Nome Social', detailOpen.nome_social ? detailOpen.nome_social : 'Sem nome social cadastrado'], ['Nome da Mãe', detailOpen.nome_mae], ['Nome do Pai', detailOpen.nome_pai],
-                      ['E-mail', (Array.isArray(detailOpen.email) ? detailOpen.email.join(', ') : detailOpen.email) || '-'],
-                    ].map(([label, value], i) => (
-                      <Grid item xs={6} sm={4} key={i}>
-                        <Typography variant="caption" color="text.secondary" component="div">{label}</Typography>
-                        <Typography variant="body2">{value || '-'}</Typography>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Paper>
-
-                {/* 3. Formações, Especialidades e Habilitações */}
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1.5 }}>Formações, Especialidades e Habilitações</Typography>
-                  {detailOpen.formacoes?.length > 0 ? (
-                    detailOpen.formacoes.map((f: any, i: number) => (
-                      <Box key={i} sx={{ mb: i < detailOpen.formacoes.length - 1 ? 2 : 0 }}>
-                        <Grid container spacing={2}>
-                          {[
-                            ['Curso', f.Curso || f.curso],
-                            ['Instituição de Ensino', f.InstituicaoDeEnsino || f.instituicao_de_ensino],
-                            ['Data de Conclusão', f.DataDeConclusao || f.data_de_conclusao],
-                            ['Data de Colação', f.DataDeColacao || f.data_de_colacao],
-                            ['Especialidades', f.Especialidades || f.especialidades],
-                            ['Habilitação', f.Habilitacao || f.habilitacao],
-                          ].map(([label, val], j) => (
-                            <Grid item xs={6} sm={4} key={j}>
-                              <Typography variant="caption" color="text.secondary" component="div">{label}</Typography>
-                              <Typography variant="body2">{val || '-'}</Typography>
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </Box>
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">Não há formação cadastrada.</Typography>
-                  )}
-                </Paper>
-
-                {/* 4. Endereço e Contato */}
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1.5 }}>Endereço e Contato</Typography>
-                  <Grid container spacing={2}>
-                    {[
-                      ['Tipo do Endereço', detailOpen.tipo_endereco], ['CEP', detailOpen.cep], ['Logradouro', detailOpen.logradouro],
-                      ['Bairro', detailOpen.bairro], ['Número', detailOpen.numero], ['Município', detailOpen.municipio],
-                      ['UF', detailOpen.uf], ['Complemento', detailOpen.complemento ? detailOpen.complemento : 'Sem complemento cadastrado'],
-                      ['Telefone', (detailOpen.telefone || '').toString().replace(/,/g, ', ')],
-                      ['E-mail', (Array.isArray(detailOpen.email) ? detailOpen.email.join(', ') : detailOpen.email) || '-'],
-                      ['Rede Social', detailOpen.rede_social ? detailOpen.rede_social : 'Sem rede social cadastrada'],
-                    ].map(([label, value], i) => (
-                      <Grid item xs={6} sm={4} key={i}>
-                        <Typography variant="caption" color="text.secondary" component="div">{label}</Typography>
-                        <Typography variant="body2">{value || '-'}</Typography>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Paper>
-
-                {/* 5. Responsabilidades */}
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1.5 }}>Responsabilidades</Typography>
-                  {detailOpen.responsabilidades_tecnicas?.length > 0 ? (
-                    detailOpen.responsabilidades_tecnicas.map((r: any, i: number) => (
-                      <Box key={i} sx={{ mb: i < detailOpen.responsabilidades_tecnicas.length - 1 ? 2 : 0 }}>
-                        <Grid container spacing={2}>
-                          {[
-                            ['Tipo da Responsabilidade', r.tipo],
-                            ['Razão Social da Empresa', r.razao_social],
-                            ['Nome Fantasia da Empresa', r.nome_fantasia],
-                            ['CNPJ', r.cnpj],
-                            ['Categoria da Empresa', r.categoria],
-                            ['Registro da Empresa', r.registro],
-                            ['Data Início', r.data_inicio],
-                            ['Data Término', r.data_termino],
-                          ].map(([label, val], j) => (
-                            <Grid item xs={6} sm={4} key={j}>
-                              <Typography variant="caption" color="text.secondary" component="div">{label}</Typography>
-                              <Typography variant="body2">{val || '-'}</Typography>
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </Box>
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">Não há responsabilidades cadastradas.</Typography>
-                  )}
-                </Paper>
-
-                {/* 6. Processos de Especialidade / Habilitação (Via SISDOC) */}
-                <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1.5 }}>Processos de Especialidade / Habilitação (Via SISDOC)</Typography>
-                  {detailOpen.processos_especialidade?.length > 0 ? (
-                    detailOpen.processos_especialidade.map((p: any, i: number) => (
-                      <Box key={i} sx={{ mb: 2, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                        <Grid container spacing={2}>
-                          {[
-                            ['Número do Processo', p.numero_processo],
-                            ['Assunto', p.assunto],
-                            ['Classificação', p.classificacao],
-                            ['Etapa', p.etapa],
-                            ['Andamento', p.andamento],
-                            ['Data do Andamento', p.data_andamento],
-                          ].map(([label, val], j) => (
-                            <Grid item xs={6} sm={4} key={j}>
-                              <Typography variant="caption" color="text.secondary" component="div">{label}</Typography>
-                              <Typography variant="body2">{val || '-'}</Typography>
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </Box>
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">Não há processos cadastrados.</Typography>
-                  )}
-                </Paper>
-              </Box>
-            )}
-
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Button variant="contained" startIcon={<PrintIcon />} onClick={handlePrint} sx={{ minWidth: 140 }}>
-                Imprimir
-              </Button>
-              <Button variant="outlined" onClick={() => setDetailOpen(null)}>Fechar</Button>
-            </Box>
-          </Box>
-        </Box>
-      )}
 
       <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
         <Alert severity={snackbar.severity}>{snackbar.message}</Alert>

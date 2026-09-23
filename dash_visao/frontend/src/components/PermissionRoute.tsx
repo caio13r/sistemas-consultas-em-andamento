@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import AuthLoadingScreen from './AuthLoadingScreen';
 
 interface PermissionRouteProps {
   children: React.ReactNode;
@@ -15,23 +16,21 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
 }) => {
   const { isAuthenticated, acceptedTerms, hasPermission, hasAnyPermission } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!acceptedTerms) {
-    return <Navigate to="/termos-de-uso" replace />;
-  }
-
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (requiredPermissions && requiredPermissions.length > 0 && !hasAnyPermission(requiredPermissions)) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
+  return (
+    <AuthLoadingScreen>
+      {!isAuthenticated ? (
+        <Navigate to="/login" replace />
+      ) : !acceptedTerms ? (
+        <Navigate to="/termos-de-uso" replace />
+      ) : requiredPermission && !hasPermission(requiredPermission) ? (
+        <Navigate to="/" replace />
+      ) : requiredPermissions && requiredPermissions.length > 0 && !hasAnyPermission(requiredPermissions) ? (
+        <Navigate to="/" replace />
+      ) : (
+        children
+      )}
+    </AuthLoadingScreen>
+  );
 };
 
 export default PermissionRoute;

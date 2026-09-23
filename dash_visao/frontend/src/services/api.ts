@@ -1,8 +1,8 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 
-// Em dev: usa proxy do Vite (mesma origem /api). Em prod: usa URL completa.
+// Em dev: proxy do Vite. Em prod: proxy do nginx. Ambos em /api.
 const api = axios.create({
-  baseURL: import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost:8002/api'),
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 // Interceptor para adicionar o token de autenticação
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -18,9 +18,11 @@ api.interceptors.response.use(
   (response: any) => response,
   (error: any) => {
     if (error.response?.status === 401) {
-      // Redirecionar para login se o token expirou
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      const path = window.location.pathname;
+      if (!path.startsWith('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

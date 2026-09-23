@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-// Em dev: usa proxy do Vite (mesma origem). Em prod: usa URL completa.
-const API_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:8002');
+import api from './api';
 
 export interface LoginResponse {
   access_token: string;
@@ -39,7 +36,7 @@ class AuthService {
       params.append('username', username);
       params.append('password', password);
 
-      const response = await axios.post<LoginResponse>(`${API_URL}/api/token`, params, {
+      const response = await api.post<LoginResponse>('/token', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -53,8 +50,7 @@ class AuthService {
     } catch (error: any) {
       console.error('Erro no login:', error.message, error.response?.data || error.code);
       if (error.code === 'ECONNABORTED' || !error.response) {
-        const baseUrl = API_URL || window.location.origin;
-        throw new Error('Servidor não respondeu. Verifique se o backend está rodando em ' + baseUrl);
+        throw new Error('Servidor não respondeu. Verifique se o backend está rodando.');
       }
       throw new Error(error.response?.data?.detail || 'Erro ao fazer login');
     }
@@ -67,6 +63,9 @@ class AuthService {
   }
 
   getToken(): string | null {
+    if (!this.token) {
+      this.token = localStorage.getItem('token');
+    }
     return this.token;
   }
 

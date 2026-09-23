@@ -12,6 +12,7 @@ services:
       - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -34,6 +35,7 @@ services:
       - /app/__pycache__
       - /app/.pytest_cache
       - ./backend/uploads:/app/uploads
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -45,12 +47,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
+      - "80:5173"
       - "5174:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8002/api
+      - VITE_API_URL=/api
       - PROXY_TARGET=http://backend:8000
     depends_on:
       - backend

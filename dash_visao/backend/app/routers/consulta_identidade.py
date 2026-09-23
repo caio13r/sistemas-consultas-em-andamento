@@ -34,21 +34,24 @@ class IdentidadeResponse(BaseModel):
     resultados: List[dict]
 
 
-def _fmt_date_api(date_str: str, time: str = "00:00:00") -> str:
-    """Converte YYYY-MM-DD para dd/mm/yyyy HH:MM:SS (formato da API)."""
-    d = datetime.strptime(date_str, "%Y-%m-%d")
-    return f"{d.day:02d}/{d.month:02d}/{d.year} {time}"
+def _fmt_date_api(date: str, time: str = "00:00:00") -> str:
+    return f"{date} {time}"
 
 
-def _call_api(path: str, params: dict, list_key: str = "list") -> list:
-    """Chama API de identidade e retorna lista de resultados."""
-    params["token"] = API_IDENTIDADE_TOKEN
-    url = f"{API_IDENTIDADE_URL}{path}"
+def _call_api(api_path: str, params: dict, list_key: str = "list") -> list:
     try:
-        resp = requests.get(url, params=params, timeout=60)
+        headers = {}
+        if API_IDENTIDADE_TOKEN:
+            headers["Authorization"] = f"Bearer {API_IDENTIDADE_TOKEN}"
+        resp = requests.get(
+            f"{API_IDENTIDADE_URL}{api_path}",
+            params=params,
+            headers=headers,
+            timeout=30,
+        )
         if resp.status_code not in (200, 201):
             raw = resp.text[:500]
-            logger.warning(f"API Identidade {resp.status_code} em {path}: {raw}")
+            logger.warning(f"API Identidade {resp.status_code}: {raw}")
             try:
                 body = resp.json()
             except Exception:

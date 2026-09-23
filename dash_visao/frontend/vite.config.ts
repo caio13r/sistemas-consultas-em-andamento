@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    allowedHosts: ['visao.cfo.org.br'],
+    allowedHosts: true,
     watch: {
       usePolling: true
     },
@@ -18,7 +18,9 @@ export default defineConfig({
       '/api': {
         target: proxyTarget,
         changeOrigin: true,
-        secure: false
+        secure: false,
+        timeout: 600000,
+        proxyTimeout: 600000,
       }
     }
   }

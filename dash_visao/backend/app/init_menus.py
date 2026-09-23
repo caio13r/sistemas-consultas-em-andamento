@@ -27,7 +27,7 @@ MENUS_DATA = [
     },
     # ---- Serviços individuais ----
     {
-        "name": "Consulta Integrada",
+        "name": "Visão integrada",
         "url": "/consulta-integrada",
         "icon": "Search",
         "description": "Busca unificada de profissionais em múltiplas fontes",
@@ -51,7 +51,7 @@ MENUS_DATA = [
         ],
     },
     {
-        "name": "Consulta Fiscalização",
+        "name": "Fiscalização",
         "url": "/consulta-fiscalizacao",
         "icon": "Gavel",
         "description": "Dados de fiscalização profissional",
@@ -60,7 +60,7 @@ MENUS_DATA = [
         "submenus": [],
     },
     {
-        "name": "Consulta Identidade",
+        "name": "Identidade",
         "url": "/consulta-identidade",
         "icon": "Badge",
         "description": "Verificação de identidade profissional",
@@ -69,7 +69,7 @@ MENUS_DATA = [
         "submenus": [],
     },
     {
-        "name": "Consulta Estatística",
+        "name": "Estatística",
         "url": "/consulta-estatistica",
         "icon": "BarChart",
         "description": "Dados estatísticos e dashboards",
@@ -78,7 +78,7 @@ MENUS_DATA = [
         "submenus": [],
     },
     {
-        "name": "Consulta Prescrição",
+        "name": "Prescrição",
         "url": "/consulta-prescricao",
         "icon": "MedicalServices",
         "description": "Consulta de prescrições e atribuições profissionais",
@@ -87,7 +87,7 @@ MENUS_DATA = [
         "submenus": [],
     },
     {
-        "name": "Consulta SIGESP",
+        "name": "SIGESP",
         "url": "/consulta-sigesp",
         "icon": "AccountBalance",
         "description": "Integração com sistema governamental SIGESP",
@@ -128,7 +128,7 @@ MENUS_DATA = [
         "submenus": [],
     },
     {
-        "name": "Consulta RFB",
+        "name": "Visão RFB",
         "url": "/consulta-rfb",
         "icon": "Policy",
         "description": "Integração com Receita Federal do Brasil (CNPJ/CPF)",
@@ -188,6 +188,20 @@ def _ensure_new_menus(db):
     db.commit()
 
 
+def _sync_menu_names(db):
+    """Atualiza nomes de menus existentes conforme MENUS_DATA (por URL)."""
+    for menu_data in MENUS_DATA:
+        url = menu_data.get("url")
+        if not url:
+            continue
+        menu = db.query(Menu).filter(Menu.url == url).first()
+        if menu and menu.name != menu_data["name"]:
+            old_name = menu.name
+            menu.name = menu_data["name"]
+            print(f"  Menu atualizado: {old_name} -> {menu_data['name']} ({url})")
+    db.commit()
+
+
 def _sync_submenus(db):
     """Sincroniza submenus existentes com MENUS_DATA (corrige nomes, URLs, ordem)."""
     for menu_data in MENUS_DATA:
@@ -225,6 +239,7 @@ def init_menus_data():
         if existing_count > 0:
             # Inserir menus novos que ainda não existem (idempotente)
             _ensure_new_menus(db)
+            _sync_menu_names(db)
             # Sincronizar submenus existentes com definição atual
             _sync_submenus(db)
             print(f"Menus já existem ({existing_count} encontrados). Verificação de novos menus/submenus concluída.")

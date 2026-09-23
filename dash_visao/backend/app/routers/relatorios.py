@@ -5,13 +5,32 @@ Fonte: DB3 (SQL Server - CFO_CWS)
 import re
 import time
 import json
+import threading
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import Optional, List
+import io
 import logging
 
-from ..database import get_db3, fix_row_encoding
+from ..database import get_db3, fix_row_encoding, SessionDB3
+from ..lib.excel_export import generate_excel_multi, generate_cielo_excel
+from ..lib.siscaf_cielo import (
+    CIELO_REPORT_TYPES,
+    EXCEL_COLUMNS,
+    EXCEL_COLUMNS_ANALITICO,
+    EXCEL_COLUMNS_SINTETICO,
+    EXCEL_COLUMNS_RENEGOCIACOES,
+    MAX_PERIOD_DAYS,
+    SISCAF_JSON_MAX_ROWS,
+    consolidate_cielo_checkout,
+    resolve_ufs,
+    sample_linhas_balanceado,
+)
+from ..lib.siscaf_job_queue import enqueue_cielo_job
 from ..models import User
 from ..core.auth import get_current_active_user, check_any_permission
 from ..lib.sql_loader import load_sql
@@ -24,6 +43,14 @@ logger = logging.getLogger(__name__)
 # Cache em memória para auditoria (sem Redis)
 _audit_cache: dict[str, tuple[float, dict]] = {}
 _AUDIT_CACHE_TTL = 1800  # 30 minutos
+
+_excel_jobs: dict[str, dict] = {}
+_excel_jobs_lock = threading.Lock()
+_EXCEL_JOB_TTL = 1800  # 30 minutos
+
+_cielo_json_jobs: dict[str, dict] = {}
+_cielo_json_jobs_lock = threading.Lock()
+_CIELO_JSON_JOB_TTL = 1800
 
 router = APIRouter(prefix="/relatorios", tags=["relatorios"])
 
@@ -562,6 +589,412 @@ def relatorio_pagamentos_diversos(
     """)
     rows = db3.execute(sql, {"inicio": inicio, "termino": termino}).mappings().all()
     return [fix_row_encoding(dict(r)) for r in rows]
+
+
+def _excel_stream(excel_bytes: bytes, filename: str) -> StreamingResponse:
+    return StreamingResponse(
+        io.BytesIO(excel_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _validate_cielo_excel_request(
+    inicio: str,
+    termino: str,
+    cro: Optional[str],
+    tipo_relatorio: str,
+) -> tuple[datetime, datetime]:
+    if tipo_relatorio not in CIELO_REPORT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"tipo_relatorio inválido. Use: {', '.join(CIELO_REPORT_TYPES.keys())}",
+        )
+
+    _validate_dates(inicio, termino)
+
+    try:
+        d_inicio = datetime.strptime(inicio, "%Y-%m-%d")
+        d_termino = datetime.strptime(termino, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Datas inválidas.")
+
+    if d_termino < d_inicio:
+        raise HTTPException(status_code=400, detail="Data término deve ser igual ou posterior à data início.")
+
+    if (d_termino - d_inicio).days > MAX_PERIOD_DAYS:
+        raise HTTPException(status_code=400, detail=f"Período máximo permitido: {MAX_PERIOD_DAYS} dias.")
+
+    try:
+        resolve_ufs(cro)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return d_inicio, d_termino
+
+
+def _build_cielo_excel(
+    db3: Session,
+    inicio: str,
+    termino: str,
+    cro: Optional[str],
+    tipo_relatorio: str,
+) -> tuple[bytes, str]:
+    d_inicio, d_termino = _validate_cielo_excel_request(inicio, termino, cro, tipo_relatorio)
+
+    try:
+        resultado = consolidate_cielo_checkout(db3, cro, inicio, termino, tipo_relatorio, for_excel=True)
+    except Exception as e:
+        logger.error("Erro consolidação Cielo: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro ao consolidar pagamentos Cielo.")
+
+    report_cfg = CIELO_REPORT_TYPES[tipo_relatorio]
+    linhas = [fix_row_encoding(row) for row in resultado["linhas"]]
+    resumo = resultado["resumo_regionais"]
+    cro_label = (cro or "TODOS").upper()
+    inicio_br = d_inicio.strftime("%d-%m-%Y")
+    termino_br = d_termino.strftime("%d-%m-%Y")
+    titulo = f"{report_cfg['nome']} — CRO: {cro_label} — {inicio_br} a {termino_br}"
+
+    if tipo_relatorio == "analitico":
+        data_columns = EXCEL_COLUMNS_ANALITICO
+    elif tipo_relatorio == "sintetico":
+        data_columns = EXCEL_COLUMNS_SINTETICO
+    elif tipo_relatorio == "renegociacoes":
+        data_columns = EXCEL_COLUMNS_RENEGOCIACOES
+    else:
+        data_columns = EXCEL_COLUMNS
+
+    sheet_name = "Renegociações Ativas" if tipo_relatorio == "renegociacoes" else "Pagamentos Cielo"
+    todos_regionais = (cro or "TODOS").strip().upper() in ("TODOS", "ALL", "*")
+
+    try:
+        excel_bytes = generate_cielo_excel(
+            linhas=linhas,
+            columns=data_columns,
+            sheet_name=sheet_name,
+            title=titulo,
+            todos_regionais=todos_regionais,
+            resumo=resumo,
+        )
+    except Exception as e:
+        logger.error("Erro ao gerar Excel Cielo [%s]: %s", tipo_relatorio, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar planilha Excel: {e}")
+
+    inicio_fmt = d_inicio.strftime("%d-%m-%Y")
+    termino_fmt = d_termino.strftime("%d-%m-%Y")
+    cro_prefix = "TODOS-REGIONAIS" if cro_label in ("TODOS", "ALL", "*") else f"CRO-{cro_label}"
+    filename = f"{cro_prefix}_{tipo_relatorio}_{inicio_fmt}_a_{termino_fmt}.xlsx"
+    return excel_bytes, filename
+
+
+def _cleanup_excel_jobs() -> None:
+    now = time.time()
+    with _excel_jobs_lock:
+        expired = [job_id for job_id, job in _excel_jobs.items() if now - job.get("created_at", now) > _EXCEL_JOB_TTL]
+        for job_id in expired:
+            _excel_jobs.pop(job_id, None)
+
+
+def _cleanup_cielo_json_jobs() -> None:
+    now = time.time()
+    with _cielo_json_jobs_lock:
+        expired = [job_id for job_id, job in _cielo_json_jobs.items() if now - job.get("created_at", now) > _CIELO_JSON_JOB_TTL]
+        for job_id in expired:
+            _cielo_json_jobs.pop(job_id, None)
+
+
+def _build_cielo_json_payload(
+    resultado: dict,
+    cro: Optional[str],
+    tipo_relatorio: str,
+) -> dict:
+    """Monta resposta JSON do relatório Cielo a partir do resultado consolidado."""
+    linhas_completas = [fix_row_encoding(row) for row in resultado["linhas"]]
+    total_completo = len(linhas_completas)
+    todos_regionais = (cro or "TODOS").strip().upper() in ("TODOS", "ALL", "*")
+    linhas = linhas_completas
+    if todos_regionais and total_completo > SISCAF_JSON_MAX_ROWS:
+        date_field = CIELO_REPORT_TYPES[tipo_relatorio].get("date_field", "")
+        linhas = sample_linhas_balanceado(linhas_completas, SISCAF_JSON_MAX_ROWS, date_field)
+        logger.info(
+            "Cielo JSON [%s]: amostra balanceada %d/%d linhas para exibição em tela",
+            tipo_relatorio, len(linhas), total_completo,
+        )
+    pendentes = [
+        r["CRO"] for r in resultado.get("resumo_regionais", [])
+        if r.get("Registros", 0) == 0 and r.get("Status") not in ("OK", "Sem registros")
+    ]
+    resumo_regionais = resultado.get("resumo_regionais", [])
+    ufs_na_tela = len({r.get("CRO") for r in linhas if r.get("CRO")})
+    logger.info(
+        "Cielo JSON [%s] cro=%s: %d linhas (%d UFs, total %d), %d pendentes %s",
+        tipo_relatorio, cro, len(linhas), ufs_na_tela, total_completo, len(pendentes), pendentes,
+    )
+    return {
+        "total": total_completo,
+        "resultados": linhas,
+        "pendentes": pendentes,
+        "resumo_regionais": resumo_regionais,
+    }
+
+
+def _run_cielo_json_job(job_id: str, inicio: str, termino: str, cro: Optional[str], tipo_relatorio: str) -> None:
+    if SessionDB3 is None:
+        with _cielo_json_jobs_lock:
+            _cielo_json_jobs[job_id].update({"status": "error", "detail": "DB3 não configurado.", "updated_at": time.time()})
+        return
+
+    with _cielo_json_jobs_lock:
+        _cielo_json_jobs[job_id].update({"status": "running", "updated_at": time.time()})
+
+    db3 = SessionDB3()
+    try:
+        resultado = consolidate_cielo_checkout(db3, cro, inicio, termino, tipo_relatorio, for_excel=True)
+        payload = _build_cielo_json_payload(resultado, cro, tipo_relatorio)
+        with _cielo_json_jobs_lock:
+            _cielo_json_jobs[job_id].update({
+                "status": "done",
+                "updated_at": time.time(),
+                **payload,
+            })
+    except Exception as exc:
+        logger.error("Erro job JSON Cielo %s: %s", job_id, exc, exc_info=True)
+        with _cielo_json_jobs_lock:
+            _cielo_json_jobs[job_id].update({
+                "status": "error",
+                "detail": "Erro ao consolidar pagamentos Cielo.",
+                "updated_at": time.time(),
+            })
+    finally:
+        db3.close()
+
+
+def _run_cielo_excel_job(job_id: str, inicio: str, termino: str, cro: Optional[str], tipo_relatorio: str) -> None:
+    if SessionDB3 is None:
+        with _excel_jobs_lock:
+            _excel_jobs[job_id].update({"status": "error", "detail": "DB3 não configurado."})
+        return
+
+    with _excel_jobs_lock:
+        _excel_jobs[job_id].update({"status": "running", "updated_at": time.time()})
+
+    db3 = SessionDB3()
+    try:
+        excel_bytes, filename = _build_cielo_excel(db3, inicio, termino, cro, tipo_relatorio)
+        with _excel_jobs_lock:
+            _excel_jobs[job_id].update({
+                "status": "done",
+                "filename": filename,
+                "excel_bytes": excel_bytes,
+                "size": len(excel_bytes),
+                "updated_at": time.time(),
+            })
+    except HTTPException as exc:
+        with _excel_jobs_lock:
+            _excel_jobs[job_id].update({
+                "status": "error",
+                "detail": exc.detail,
+                "updated_at": time.time(),
+            })
+    except Exception as exc:
+        logger.error("Erro job Excel Cielo %s: %s", job_id, exc, exc_info=True)
+        with _excel_jobs_lock:
+            _excel_jobs[job_id].update({
+                "status": "error",
+                "detail": "Erro ao gerar planilha Excel.",
+                "updated_at": time.time(),
+            })
+    finally:
+        db3.close()
+
+
+@router.get("/cielo-checkout")
+def relatorio_cielo_checkout_json(
+    inicio: str = Query(..., description="Data início YYYY-MM-DD"),
+    termino: str = Query(..., description="Data término YYYY-MM-DD"),
+    cro: Optional[str] = Query("TODOS", description="UF do CRO ou TODOS"),
+    tipo_relatorio: str = Query("sintetico", description="Tipo: analitico | sintetico | renegociacoes"),
+    current_user: User = Depends(check_any_permission(["view_relatorio_financeiro", "export_relatorio_financeiro"])),
+    db3: Session = Depends(get_db3),
+):
+    """Legado síncrono — preferir POST /cielo-checkout/jobs (fila assíncrona)."""
+    if tipo_relatorio not in CIELO_REPORT_TYPES:
+        raise HTTPException(status_code=400, detail=f"tipo_relatorio inválido. Use: {', '.join(CIELO_REPORT_TYPES.keys())}")
+    _validate_dates(inicio, termino)
+    try:
+        d_inicio = datetime.strptime(inicio, "%Y-%m-%d")
+        d_termino = datetime.strptime(termino, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Datas inválidas.")
+    if d_termino < d_inicio:
+        raise HTTPException(status_code=400, detail="Data término deve ser igual ou posterior à data início.")
+    if (d_termino - d_inicio).days > MAX_PERIOD_DAYS:
+        raise HTTPException(status_code=400, detail=f"Período máximo permitido: {MAX_PERIOD_DAYS} dias.")
+    try:
+        resolve_ufs(cro)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
+        resultado = consolidate_cielo_checkout(db3, cro, inicio, termino, tipo_relatorio, for_excel=True)
+    except Exception as e:
+        logger.error("Erro consolidação Cielo JSON (%s): %s", tipo_relatorio, e)
+        raise HTTPException(status_code=500, detail="Erro ao consolidar pagamentos Cielo.")
+    return _build_cielo_json_payload(resultado, cro, tipo_relatorio)
+
+
+@router.post("/cielo-checkout/jobs")
+def iniciar_cielo_checkout_json_job(
+    inicio: str = Query(..., description="Data início YYYY-MM-DD"),
+    termino: str = Query(..., description="Data término YYYY-MM-DD"),
+    cro: Optional[str] = Query("TODOS", description="UF do CRO ou TODOS"),
+    tipo_relatorio: str = Query("sintetico", description="Tipo: analitico | sintetico | renegociacoes"),
+    current_user: User = Depends(check_any_permission(["view_relatorio_financeiro", "export_relatorio_financeiro"])),
+):
+    """Enfileira consolidação Cielo — executa somente após ação do usuário (botão Gerar)."""
+    if tipo_relatorio not in CIELO_REPORT_TYPES:
+        raise HTTPException(status_code=400, detail=f"tipo_relatorio inválido. Use: {', '.join(CIELO_REPORT_TYPES.keys())}")
+    _validate_dates(inicio, termino)
+    try:
+        d_inicio = datetime.strptime(inicio, "%Y-%m-%d")
+        d_termino = datetime.strptime(termino, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Datas inválidas.")
+    if d_termino < d_inicio:
+        raise HTTPException(status_code=400, detail="Data término deve ser igual ou posterior à data início.")
+    if (d_termino - d_inicio).days > MAX_PERIOD_DAYS:
+        raise HTTPException(status_code=400, detail=f"Período máximo permitido: {MAX_PERIOD_DAYS} dias.")
+    try:
+        resolve_ufs(cro)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    _cleanup_cielo_json_jobs()
+    job_id = uuid.uuid4().hex
+    now = time.time()
+    with _cielo_json_jobs_lock:
+        _cielo_json_jobs[job_id] = {
+            "status": "pending",
+            "created_at": now,
+            "updated_at": now,
+            "inicio": inicio,
+            "termino": termino,
+            "cro": cro or "TODOS",
+            "tipo_relatorio": tipo_relatorio,
+        }
+
+    position = enqueue_cielo_job(
+        lambda: _run_cielo_json_job(job_id, inicio, termino, cro, tipo_relatorio)
+    )
+    return {"job_id": job_id, "status": "pending", "queue_position": position}
+
+
+@router.get("/cielo-checkout/jobs/{job_id}")
+def consultar_cielo_checkout_json_job(
+    job_id: str,
+    current_user: User = Depends(check_any_permission(["view_relatorio_financeiro", "export_relatorio_financeiro"])),
+):
+    _cleanup_cielo_json_jobs()
+    with _cielo_json_jobs_lock:
+        job = _cielo_json_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Consulta não encontrada ou expirada.")
+        response = {
+            "job_id": job_id,
+            "status": job.get("status"),
+            "detail": job.get("detail"),
+        }
+        if job.get("status") == "done":
+            response.update({
+                "total": job.get("total"),
+                "resultados": job.get("resultados"),
+                "pendentes": job.get("pendentes", []),
+                "resumo_regionais": job.get("resumo_regionais", []),
+            })
+        return response
+
+
+@router.get("/cielo-checkout-consolidado/excel")
+def relatorio_cielo_checkout_excel(
+    inicio: str = Query(..., description="Data início YYYY-MM-DD (data crédito/pagamento)"),
+    termino: str = Query(..., description="Data término YYYY-MM-DD"),
+    cro: Optional[str] = Query("TODOS", description="UF do CRO ou TODOS"),
+    tipo_relatorio: str = Query("analitico", description="Tipo: analitico | sintetico | renegociacoes"),
+    current_user: User = Depends(check_any_permission(["view_relatorio_financeiro", "export_relatorio_financeiro"])),
+    db3: Session = Depends(get_db3),
+):
+    """Consolida pagamentos Cielo Checkout e gera planilha Excel (sem pré-visualização)."""
+    excel_bytes, filename = _build_cielo_excel(db3, inicio, termino, cro, tipo_relatorio)
+    return _excel_stream(excel_bytes, filename)
+
+
+@router.post("/cielo-checkout-consolidado/excel/jobs")
+def iniciar_cielo_checkout_excel_job(
+    inicio: str = Query(..., description="Data início YYYY-MM-DD (data crédito/pagamento)"),
+    termino: str = Query(..., description="Data término YYYY-MM-DD"),
+    cro: Optional[str] = Query("TODOS", description="UF do CRO ou TODOS"),
+    tipo_relatorio: str = Query("analitico", description="Tipo: analitico | sintetico | renegociacoes"),
+    current_user: User = Depends(check_any_permission(["view_relatorio_financeiro", "export_relatorio_financeiro"])),
+):
+    """Enfileira geração assíncrona do Excel Cielo — somente após ação do usuário."""
+    _validate_cielo_excel_request(inicio, termino, cro, tipo_relatorio)
+    _cleanup_excel_jobs()
+
+    job_id = uuid.uuid4().hex
+    now = time.time()
+    with _excel_jobs_lock:
+        _excel_jobs[job_id] = {
+            "status": "pending",
+            "created_at": now,
+            "updated_at": now,
+            "inicio": inicio,
+            "termino": termino,
+            "cro": cro or "TODOS",
+            "tipo_relatorio": tipo_relatorio,
+        }
+
+    position = enqueue_cielo_job(
+        lambda: _run_cielo_excel_job(job_id, inicio, termino, cro, tipo_relatorio)
+    )
+    return {"job_id": job_id, "status": "pending", "queue_position": position}
+
+
+@router.get("/cielo-checkout-consolidado/excel/jobs/{job_id}")
+def consultar_cielo_checkout_excel_job(
+    job_id: str,
+    current_user: User = Depends(check_any_permission(["view_relatorio_financeiro", "export_relatorio_financeiro"])),
+):
+    _cleanup_excel_jobs()
+    with _excel_jobs_lock:
+        job = _excel_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Geração de Excel não encontrada ou expirada.")
+        return {
+            "job_id": job_id,
+            "status": job.get("status"),
+            "detail": job.get("detail"),
+            "filename": job.get("filename"),
+            "size": job.get("size"),
+        }
+
+
+@router.get("/cielo-checkout-consolidado/excel/jobs/{job_id}/download")
+def baixar_cielo_checkout_excel_job(
+    job_id: str,
+    current_user: User = Depends(check_any_permission(["view_relatorio_financeiro", "export_relatorio_financeiro"])),
+):
+    with _excel_jobs_lock:
+        job = _excel_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Geração de Excel não encontrada ou expirada.")
+        if job.get("status") == "error":
+            raise HTTPException(status_code=500, detail=job.get("detail") or "Erro ao gerar planilha Excel.")
+        if job.get("status") != "done":
+            raise HTTPException(status_code=409, detail="Planilha ainda está sendo gerada.")
+        excel_bytes = job.get("excel_bytes")
+        filename = job.get("filename") or "relatorio_cielo.xlsx"
+
+    return _excel_stream(excel_bytes, filename)
 
 
 @router.get("/arrecadacao-selfpay")

@@ -22,18 +22,28 @@ def get_users(
 
 @router.post("", response_model=UserSchema)
 def create_user(
-    user: UserCreate, 
-    db: Session = Depends(get_db), 
-    current_user: User = Depends(require_admin)
+    user: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_permission("create_users")),
 ):
     if db.query(User).filter(User.email == user.email).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email já cadastrado")
     if db.query(User).filter(User.username == user.username).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
-        
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nome de usuário já cadastrado")
+
+    role_ids = user.role_ids or []
+    user_data = user.model_dump(exclude={"password", "role_ids"})
     hashed_password = get_password_hash(user.password)
-    db_user = User(**user.dict(exclude={'password'}), hashed_password=hashed_password)
+    db_user = User(**user_data, hashed_password=hashed_password)
     db.add(db_user)
+    db.flush()
+
+    if role_ids:
+        roles = db.query(Role).filter(Role.id.in_(role_ids)).all()
+        if len(roles) != len(set(role_ids)):
+            raise HTTPException(status_code=400, detail="Um ou mais perfis informados são inválidos")
+        db_user.roles = roles
+
     db.commit()
     db.refresh(db_user)
     return db_user
@@ -114,7 +124,10 @@ def delete_user(
     return {"message": "User deleted successfully"}
 
 @router.get("/roles", response_model=List[dict])
-def get_roles(db: Session = Depends(get_db)):
+def get_roles(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """Lista todos os roles disponíveis"""
     roles = db.query(Role).all()
     return [
@@ -138,8 +151,9 @@ def create_first_admin(
     if db.query(User).filter(User.username == user.username).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
         
+    user_data = user.model_dump(exclude={"password", "role_ids"})
     hashed_password = get_password_hash(user.password)
-    db_user = User(**user.dict(exclude={'password'}), hashed_password=hashed_password, is_superuser=True)
+    db_user = User(**user_data, hashed_password=hashed_password, is_superuser=True)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

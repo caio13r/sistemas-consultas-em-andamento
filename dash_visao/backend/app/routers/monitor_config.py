@@ -2,6 +2,7 @@
 Monitor Config - Configuração do destino de monitoramento central.
 Acesso restrito a administradores.
 """
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -123,6 +124,90 @@ def update_monitor_config(
     invalidate_cache()
 
     return _to_response(cfg)
+
+
+@router.get("/reference")
+def get_monitor_reference(
+    current_user: User = Depends(check_permission("manage_users")),
+    db: Session = Depends(get_db),
+):
+    """Retorna dados de referencia para cadastrar o Visao no Monitor de Sistemas."""
+    cfg = _ensure_config(db)
+    frontend_url = (os.getenv("FRONTEND_URL") or "http://192.168.161.156:5174").rstrip("/")
+    effective_url = f"http://{cfg.host}:{cfg.port}/ingest/push-http"
+    monitor_systems_url = "http://sis-monitor.cfo.local/app/systems"
+
+    registration = [
+        {
+            "field": "Nome do sistema",
+            "value": "Visão CFO",
+            "note": "Nome amigavel exibido na lista do Monitor.",
+        },
+        {
+            "field": "Chave do sistema",
+            "value": cfg.system_key,
+            "note": "Deve ser identica ao systemKey enviado pelo Visao na ingestao.",
+        },
+        {
+            "field": "Equipe responsável",
+            "value": "Tecnologia da Informação - Desenvolvimento",
+            "note": "Equipe dona do sistema no Monitor.",
+        },
+        {
+            "field": "URL base",
+            "value": frontend_url,
+            "note": "URL principal do Visao (FRONTEND_URL).",
+        },
+        {
+            "field": "URL da documentação",
+            "value": f"{frontend_url}/documentacao",
+            "note": "Opcional; apontar para a documentacao interna se existir.",
+        },
+        {
+            "field": "URL de redirecionamento",
+            "value": frontend_url,
+            "note": "Para o botao de acesso rapido no Monitor.",
+        },
+        {
+            "field": "Ambiente",
+            "value": cfg.environment,
+            "note": "Mesmo ambiente configurado na API de Ingestao do Visao.",
+        },
+        {
+            "field": "Tipo de transporte",
+            "value": "push_http",
+            "note": "Visao envia eventos via POST /ingest/push-http.",
+        },
+        {
+            "field": "x-ingest-key",
+            "value": "Mesma chave ja configurada na API de Ingestao do Visao",
+            "note": "Nao invente outra chave; use a mesma do Visao.",
+        },
+    ]
+
+    config_json = {
+        "transportType": "push_http",
+        "targetUrl": effective_url,
+        "authHeader": "x-ingest-key",
+        "method": "POST",
+        "expectedStatus": 202,
+        "retryStrategy": "exponential_backoff_with_jitter",
+        "systemKey": cfg.system_key,
+        "environment": cfg.environment,
+        "serviceName": "dash-visao-api",
+    }
+
+    return {
+        "system_name": "Visão CFO",
+        "system_key": cfg.system_key,
+        "environment": cfg.environment,
+        "effective_url": effective_url,
+        "monitor_systems_url": monitor_systems_url,
+        "frontend_url": frontend_url,
+        "ingest_key_configured": bool(cfg.ingest_key),
+        "registration": registration,
+        "config_json": config_json,
+    }
 
 
 @router.post("/test")

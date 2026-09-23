@@ -337,7 +337,7 @@ def change_log_stats(
 
 # Mapeamento de prefixo de path → nome da funcionalidade
 _FEATURE_MAP = [
-    ("/api/consulta-integrada", "Consulta Integrada"),
+    ("/api/consulta-integrada", "Visão integrada"),
     ("/api/consulta-auditorias", "Auditorias"),
     ("/api/consulta-fiscalizacao", "Consulta Fiscalização"),
     ("/api/consulta-identidade", "Consulta Identidade"),

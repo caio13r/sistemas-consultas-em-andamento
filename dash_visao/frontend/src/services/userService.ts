@@ -9,16 +9,37 @@ export interface User {
   password?: string;
   is_active: boolean;
   is_superuser: boolean;
-  role_id?: number;
+  role_ids?: number[];
   permissions?: string[];
   roles?: string[];
   created_at?: string;
   last_activity?: string;
 }
 
+export interface RoleOption {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface UserCreatePayload {
+  username: string;
+  email: string;
+  full_name: string;
+  password: string;
+  is_active: boolean;
+  is_superuser: boolean;
+  role_ids: number[];
+}
+
 export const userService = {
-  async createUser(userData: User): Promise<User> {
-    const response = await api.post<User>('/users/', userData);
+  async getRoles(): Promise<RoleOption[]> {
+    const response = await api.get<RoleOption[]>('/users/roles');
+    return response.data;
+  },
+
+  async createUser(userData: UserCreatePayload): Promise<User> {
+    const response = await api.post<User>('/users', userData);
     return response.data;
   },
 

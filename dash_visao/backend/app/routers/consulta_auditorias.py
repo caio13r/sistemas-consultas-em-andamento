@@ -247,11 +247,13 @@ def buscar_auditoria(
     params["offset"] = offset
     params["page_size"] = page_size
 
+    order_col = audit.get("filter_column", "CRO")
+
     # Single query: COUNT(*) OVER() returns total alongside paginated rows
     query_sql = text(
         f"SELECT {columns}, COUNT(*) OVER() AS _total_count "
         f"FROM {view} WHERE {where} "
-        f"ORDER BY (SELECT NULL) OFFSET :offset ROWS FETCH NEXT :page_size ROWS ONLY"
+        f"ORDER BY {order_col} OFFSET :offset ROWS FETCH NEXT :page_size ROWS ONLY"
     )
     rows = db3.execute(query_sql, params).mappings().all()
 

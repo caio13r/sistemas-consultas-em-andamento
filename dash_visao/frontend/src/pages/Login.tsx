@@ -3,9 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import logoCfo from '../assets/logo.png';
+import brasaoCfo from '../assets/brasao.png';
 import {
   MapPin, Phone, Mail, Eye, EyeOff, LogIn,
-  UserPlus, FileSearch, Lock, ChevronRight,
+  UserPlus, FileSearch, ChevronRight,
 } from 'lucide-react';
 
 const Login: React.FC = () => {
@@ -121,20 +122,19 @@ const Login: React.FC = () => {
               <div className="p-8 md:p-10 flex-grow flex flex-col justify-center">
                 {/* Title */}
                 <div className="text-center mb-8">
-                  <div
-                    className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-                    style={{ background: 'linear-gradient(135deg, #7A1E26 0%, #9A2832 100%)' }}
-                  >
-                    <Lock size={28} className="text-white" />
-                  </div>
+                  <img
+                    src={brasaoCfo}
+                    alt="Brasão CFO"
+                    className="mx-auto mb-4 h-16 w-auto object-contain"
+                  />
                   <h2
                     className="font-display tracking-tight"
-                    style={{ fontSize: 'clamp(24px, 4vw, 32px)', color: '#0A0506', fontWeight: 400 }}
+                    style={{ fontSize: 'clamp(22px, 3.5vw, 28px)', color: '#0A0506', fontWeight: 500 }}
                   >
                     Acesso ao Sistema
                   </h2>
-                  <p className="text-sm mt-1.5" style={{ color: 'rgba(20,10,12,0.5)' }}>
-                    Informe suas credenciais para continuar
+                  <p className="text-xs mt-1 uppercase tracking-widest" style={{ color: 'rgba(20,10,12,0.4)', letterSpacing: '0.15em' }}>
+                    Conselho Federal de Odontologia
                   </p>
                 </div>
 

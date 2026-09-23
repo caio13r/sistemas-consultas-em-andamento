@@ -33,6 +33,7 @@ class ProfissionalResult(BaseModel):
     cro: Optional[str] = None
     categoria: Optional[str] = None
     inscricao: Optional[str] = None
+    data_inscricao: Optional[str] = None
     tipo_inscricao: Optional[str] = None
     situacao: Optional[str] = None
     detalhe: Optional[str] = None
@@ -56,6 +57,8 @@ class ProfissionalDetalhe(BaseModel):
     situacao: Optional[str] = None
     detalhe: Optional[str] = None
     situacao_financeira: Optional[str] = None
+    data_inscricao: Optional[str] = None
+    data_situacao: Optional[str] = None
     # Dados pessoais
     data_nascimento: Optional[str] = None
     genero: Optional[str] = None
@@ -64,9 +67,16 @@ class ProfissionalDetalhe(BaseModel):
     estado_civil: Optional[str] = None
     nacionalidade: Optional[str] = None
     naturalidade: Optional[str] = None
+    identidade: Optional[str] = None
+    orgao_emissor: Optional[str] = None
+    uf_rg: Optional[str] = None
+    data_emissao_rg: Optional[str] = None
+    nome_social: Optional[str] = None
     # Contato
     email: Optional[str] = None
     telefone: Optional[str] = None
+    rede_social: Optional[str] = None
+    tipo_endereco: Optional[str] = None
     logradouro: Optional[str] = None
     numero: Optional[str] = None
     complemento: Optional[str] = None
@@ -138,14 +148,34 @@ def buscar_profissionais(
         conditions.append("REPLACE(REPLACE(REPLACE(dp.CPF, '.', ''), '-', ''), '/', '') LIKE :cpf")
         params["cpf"] = f"%{cpf_limpo}%"
     if email:
-        conditions.append("dp.Nome IN (SELECT dp2.Nome FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Dados_Pessoais dp2 WHERE dp2.Email LIKE :email)")
-        params["email"] = f"%{email}%"
+        emails = [e.strip() for e in email.split(",") if e.strip()]
+        if len(emails) == 1:
+            conditions.append("EXISTS (SELECT 1 FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Endereco_e_Contato dp2 WHERE dp2.IdRegistro = dp.IdRegistro AND dp2.Email LIKE :email_0)")
+            params["email_0"] = f"%{emails[0]}%"
+        elif emails:
+            or_parts = []
+            for i, e in enumerate(emails):
+                or_parts.append(f"dp2.Email LIKE :email_{i}")
+                params[f"email_{i}"] = f"%{e}%"
+            conditions.append(f"EXISTS (SELECT 1 FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Endereco_e_Contato dp2 WHERE dp2.IdRegistro = dp.IdRegistro AND ({' OR '.join(or_parts)}))")
     if telefone:
         tel_limpo = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-        conditions.append("dp.Nome IN (SELECT dp2.Nome FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Dados_Pessoais dp2 WHERE REPLACE(REPLACE(REPLACE(REPLACE(dp2.Telefone, '(', ''), ')', ''), '-', ''), ' ', '') LIKE :telefone)")
+        conditions.append("EXISTS (SELECT 1 FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Endereco_e_Contato dp2 WHERE dp2.IdRegistro = dp.IdRegistro AND REPLACE(REPLACE(REPLACE(REPLACE(dp2.Telefone, '(', ''), ')', ''), '-', ''), ' ', '') LIKE :telefone)")
         params["telefone"] = f"%{tel_limpo}%"
 
     where = " AND ".join(conditions) if conditions else "1=1"
+    order_by = (
+        """
+        CASE
+            WHEN TRY_CONVERT(bigint, NULLIF(REPLACE(REPLACE(REPLACE(dp.Inscricao, '.', ''), '-', ''), '/', ''), '')) IS NULL THEN 1
+            ELSE 0
+        END,
+        TRY_CONVERT(bigint, NULLIF(REPLACE(REPLACE(REPLACE(dp.Inscricao, '.', ''), '-', ''), '/', ''), '')) DESC,
+        dp.Nome
+        """
+        if cro and categoria
+        else "dp.Nome"
+    )
 
     # Count
     count_sql = text(f"""
@@ -162,6 +192,7 @@ def buscar_profissionais(
             dp.CroSigla AS cro,
             dp.CategoriaSigla AS categoria,
             dp.Inscricao AS inscricao,
+            CONVERT(varchar(10), dp.DataInscricao, 103) AS data_inscricao,
             dp.TipoDeInscricao AS tipo_inscricao,
             dp.Situacao AS situacao,
             dp.DetalheSituacao AS detalhe,
@@ -169,7 +200,7 @@ def buscar_profissionais(
             dp.IdRegistro AS id_registro
         FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Dados_do_Profissional dp
         WHERE {where}
-        ORDER BY dp.Nome
+        ORDER BY {order_by}
     """)
     rows = db3.execute(query_sql, params).mappings().all()
 
@@ -184,6 +215,13 @@ def _safe_val(v):
     return str(v)
 
 
+def _run_query(engine, sql_str: str, params: dict) -> list:
+    """Executa uma query em conexão própria (para uso em threads paralelas)."""
+    with engine.connect() as conn:
+        rows = conn.execute(text(sql_str), params).mappings().all()
+        return [{k: _safe_val(v) for k, v in dict(r).items()} for r in rows]
+
+
 @router.get("/profissionais/{id_registro}", response_model=ProfissionalDetalhe)
 def detalhe_profissional(
     id_registro: Union[str, int],
@@ -191,103 +229,86 @@ def detalhe_profissional(
     current_user: User = Depends(check_permission("view_consulta_integrada")),
 ):
     """Detalhes completos de um profissional por IdRegistro (UUID ou int)"""
+    from concurrent.futures import ThreadPoolExecutor
+    from ..database import engine_db3
+
     params = {"id_registro": str(id_registro)}
 
-    # 1. Dados do profissional (Cons_Visao_Nacional_PF_Dados_do_Profissional)
-    prof_sql = text("""
-        SELECT TOP 1
-            dp.Nome AS nome, dp.CPF AS cpf, dp.CroSigla AS cro,
-            dp.CategoriaSigla AS categoria, dp.Inscricao AS inscricao,
-            dp.TipoDeInscricao AS tipo_inscricao, dp.Situacao AS situacao,
-            dp.DetalheSituacao AS detalhe, dp.SituacaoFinanceira AS situacao_financeira
-        FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Dados_do_Profissional dp
-        WHERE dp.IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
-    """)
-    prof = db3.execute(prof_sql, params).mappings().first()
-    if not prof:
-        raise HTTPException(status_code=404, detail="Profissional não encontrado")
-
-    result = {k: _safe_val(v) for k, v in dict(prof).items()}
-
-    # 2. Dados pessoais (Cons_Visao_Nacional_PF_Dados_Pessoais + Endereco_e_Contato para Email)
-    pessoais_sql = text("""
-        SELECT TOP 1
-            dp.DataNascimento AS data_nascimento, dp.Genero AS genero,
-            dp.NomeDaMae AS nome_mae, dp.NomeDoPai AS nome_pai,
-            dp.EstadoCivil AS estado_civil, dp.Nacionalidade AS nacionalidade, dp.Naturalidade AS naturalidade,
-            ec.Email AS email, ec.Telefone AS telefone,
-            ec.Logradouro AS logradouro, ec.Numero AS numero, ec.Complemento AS complemento,
-            ec.Bairro AS bairro, ec.Municipio AS municipio, ec.UF AS uf, ec.CEP AS cep
-        FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Dados_Pessoais dp
-        LEFT JOIN CFO_CWS.dbo.Cons_Visao_Nacional_PF_Endereco_e_Contato ec ON dp.IdRegistro = ec.IdRegistro
-        WHERE dp.IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
-    """)
-    try:
-        pessoais = db3.execute(pessoais_sql, params).mappings().first()
-        if pessoais:
-            for k, v in dict(pessoais).items():
-                result[k] = _safe_val(v)
-    except Exception:
-        # Fallback: apenas Endereco_e_Contato se Dados_Pessoais não existir
-        ec_sql = text("""
+    # Todas as queries rodam em paralelo — valida existência depois
+    queries = {
+        "prof": """
             SELECT TOP 1
-                Email AS email, Telefone AS telefone,
-                Logradouro AS logradouro, Numero AS numero, Complemento AS complemento,
-                Bairro AS bairro, Municipio AS municipio, UF AS uf, CEP AS cep
+                dp.Nome AS nome, dp.CPF AS cpf, dp.CroSigla AS cro,
+                dp.CategoriaSigla AS categoria, dp.Inscricao AS inscricao,
+                dp.TipoDeInscricao AS tipo_inscricao, dp.Situacao AS situacao,
+                dp.DetalheSituacao AS detalhe, dp.SituacaoFinanceira AS situacao_financeira,
+                dp.DataInscricao AS data_inscricao, dp.DataSituacao AS data_situacao
+            FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Dados_do_Profissional dp
+            WHERE dp.IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
+        """,
+        "pessoais": """
+            SELECT TOP 1
+                DataNascimento AS data_nascimento, Genero AS genero,
+                NomeDaMae AS nome_mae, NomeDoPai AS nome_pai,
+                EstadoCivil AS estado_civil, Nacionalidade AS nacionalidade,
+                Naturalidade AS naturalidade, Identidade AS identidade,
+                OrgaoEmissor AS orgao_emissor, UF AS uf_rg,
+                DataEmissaoRG AS data_emissao_rg, NomeSocial AS nome_social
+            FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Dados_Pessoais
+            WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
+        """,
+        "contato": """
+            SELECT TOP 1
+                Email AS email, Telefone AS telefone, RedeSocial AS rede_social,
+                TipoEndereco AS tipo_endereco, Logradouro AS logradouro, Numero AS numero,
+                Complemento AS complemento, Bairro AS bairro,
+                Municipio AS municipio, UF AS uf, CEP AS cep
             FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Endereco_e_Contato
             WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
-        """)
-        ec = db3.execute(ec_sql, params).mappings().first()
-        if ec:
-            for k, v in dict(ec).items():
-                result[k] = _safe_val(v)
+        """,
+        "formacoes": """
+            SELECT InstituicaoDeEnsino, Curso, DataDeColacao, DataDeConclusao,
+                   Especialidades, Habilitacao
+            FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Formacoes
+            WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
+        """,
+        "resp_tec": """
+            SELECT TipoResponsabilidade AS tipo,
+                   RazaoSocialDaEmpresa AS razao_social,
+                   NomeFantasiaDaEmpresa AS nome_fantasia,
+                   CNPJ AS cnpj, CategoriaDaEmpresa AS categoria,
+                   RegistroDaEmpresa AS registro,
+                   DataInicio AS data_inicio, DataTermino AS data_termino
+            FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Responsabilidade_Tecnica
+            WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
+        """,
+        "processos": """
+            SELECT NumeroProcesso AS numero_processo, Assunto AS assunto,
+                   Cassificacao AS classificacao, Etapa AS etapa,
+                   Andamento AS andamento, DataAndamento AS data_andamento
+            FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Processo_de_Especialidade_ou_Habilitacao
+            WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
+        """,
+    }
 
-    # 3. Formações
-    form_sql = text("""
-        SELECT InstituicaoDeEnsino, Curso, DataDeColacao, DataDeConclusao
-        FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Formacoes
-        WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
-    """)
-    formacoes = db3.execute(form_sql, params).mappings().all()
-    result["formacoes"] = [{k: _safe_val(v) for k, v in dict(f).items()} for f in formacoes]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = {
+            key: pool.submit(_run_query, engine_db3, sql, params)
+            for key, sql in queries.items()
+        }
+        results = {key: f.result() for key, f in futures.items()}
 
-    # 4. Responsabilidades técnicas (empresas - conforme sistema-consultas)
-    rt_sql = text("""
-        SELECT
-            TipoResponsabilidade AS tipo,
-            RazaoSocialDaEmpresa AS razao_social,
-            NomeFantasiaDaEmpresa AS nome_fantasia,
-            CNPJ AS cnpj,
-            CategoriaDaEmpresa AS categoria,
-            RegistroDaEmpresa AS registro,
-            DataInicio AS data_inicio,
-            DataTermino AS data_termino
-        FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Responsabilidade_Tecnica
-        WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
-    """)
-    try:
-        rts = db3.execute(rt_sql, params).mappings().all()
-        result["responsabilidades_tecnicas"] = [{k: _safe_val(v) for k, v in dict(r).items()} for r in rts]
-    except Exception:
-        result["responsabilidades_tecnicas"] = []
+    if not results["prof"]:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
 
-    # 5. Processos de Especialidade/Habilitação (SISDOC)
-    proc_sql = text("""
-        SELECT
-            NumeroProcesso AS numero_processo,
-            Assunto AS assunto,
-            Cassificacao AS classificacao,
-            Etapa AS etapa,
-            Andamento AS andamento,
-            DataAndamento AS data_andamento
-        FROM CFO_CWS.dbo.Cons_Visao_Nacional_PF_Processo_de_Especialidade_ou_Habilitacao
-        WHERE IdRegistro = CAST(:id_registro AS UNIQUEIDENTIFIER)
-    """)
-    try:
-        procs = db3.execute(proc_sql, params).mappings().all()
-        result["processos_especialidade"] = [{k: _safe_val(v) for k, v in dict(p).items()} for p in procs]
-    except Exception:
-        result["processos_especialidade"] = []
+    result = results["prof"][0]
+    if results["pessoais"]:
+        result.update(results["pessoais"][0])
+    if results["contato"]:
+        result.update(results["contato"][0])
+    result["formacoes"] = results["formacoes"]
+    result["responsabilidades_tecnicas"] = results["resp_tec"]
+    result["processos_especialidade"] = results["processos"]
 
     return ProfissionalDetalhe(**result)
 

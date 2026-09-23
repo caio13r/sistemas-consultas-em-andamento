@@ -19,7 +19,7 @@ const UF_LIST = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT
 interface TipoEleicao { codigo: string; nome: string; }
 
 const DESCRICOES: Record<string, string> = {
-  'lista-completa': 'Busca na lista completa de eleitores por CRO, nome, CPF, inscrição.',
+  'lista-completa': 'Lista completa de eleitores por CRO.',
   'estatisticas': 'Estatísticas eleitorais por CRO (ativos, votantes, devedores).',
   'cpf-duplicados': 'CPFs com inscrição ativa em mais de um CRO.',
   'delegados': 'Lista suplementar de delegados eleitores.',
@@ -61,8 +61,8 @@ export default function EleicoesRegionais() {
 
   const handleSearch = async () => {
     if (!selectedTipo) return;
-    if (selectedTipo === 'lista-completa' && !Object.values(filters).some(v => v.trim())) {
-      setSnackbar({ open: true, message: 'Preencha pelo menos um filtro.', severity: 'warning' }); return;
+    if (selectedTipo === 'lista-completa' && !filters.cro) {
+      setSnackbar({ open: true, message: 'Selecione um CRO.', severity: 'warning' }); return;
     }
     setLoading(true); setSearched(true);
     try {
@@ -147,25 +147,6 @@ export default function EleicoesRegionais() {
                   </Select>
                 </FormControl>
               </Grid>
-              {selectedTipo === 'lista-completa' && (
-                <>
-                  <Grid item xs={6} sm={4} md={3}>
-                    <TextField fullWidth size="small" label="Nome" value={filters.nome}
-                      onChange={e => setFilters(p => ({ ...p, nome: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-                  </Grid>
-                  <Grid item xs={6} sm={4} md={3}>
-                    <TextField fullWidth size="small" label="CPF" value={filters.cpf}
-                      onChange={e => setFilters(p => ({ ...p, cpf: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-                  </Grid>
-                  <Grid item xs={6} sm={4} md={3}>
-                    <TextField fullWidth size="small" label="Inscrição" value={filters.inscricao}
-                      onChange={e => setFilters(p => ({ ...p, inscricao: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-                  </Grid>
-                </>
-              )}
             </Grid>
           )}
 

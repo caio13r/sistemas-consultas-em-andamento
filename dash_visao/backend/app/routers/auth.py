@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import User, PasswordResetToken
-from ..core.auth import verify_password, create_access_token, get_password_hash, get_user_permissions, get_user_roles
+from ..core.auth import verify_password, create_access_token, get_password_hash, get_user_permissions, get_user_roles, ACCESS_TOKEN_EXPIRE_MINUTES
 from ..schemas.permission import LoginResponse
 from ..lib.email_helper import send_password_reset_email
 from datetime import timedelta, datetime, timezone
@@ -47,7 +47,7 @@ def login_for_access_token(
             detail="Inactive user"
         )
 
-    access_token_expires = timedelta(minutes=30)
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )

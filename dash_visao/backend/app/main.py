@@ -13,6 +13,7 @@ from .routers import (
 )
 from .init_db import init_db
 from .init_menus import init_menus_data
+from .init_servicos import init_servicos_data
 from .core.cors import setup_cors
 import logging
 import traceback
@@ -29,9 +30,11 @@ Base.metadata.create_all(bind=engine)
 logger.info("Inicializando dados do banco...")
 init_db()
 
-# Inicializar menus
+# Inicializar menus e catálogo de serviços (sync idempotente)
 logger.info("Inicializando menus...")
 init_menus_data()
+logger.info("Sincronizando catálogo de serviços...")
+init_servicos_data()
 
 app = FastAPI(title="Sistema Consultas CFO API")
 

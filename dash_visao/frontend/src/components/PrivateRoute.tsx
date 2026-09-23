@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import AuthLoadingScreen from './AuthLoadingScreen';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -9,15 +10,17 @@ interface PrivateRouteProps {
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const { isAuthenticated, acceptedTerms } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!acceptedTerms) {
-    return <Navigate to="/termos-de-uso" replace />;
-  }
-
-  return <>{children}</>;
+  return (
+    <AuthLoadingScreen>
+      {!isAuthenticated ? (
+        <Navigate to="/login" replace />
+      ) : !acceptedTerms ? (
+        <Navigate to="/termos-de-uso" replace />
+      ) : (
+        children
+      )}
+    </AuthLoadingScreen>
+  );
 };
 
 export default PrivateRoute; 

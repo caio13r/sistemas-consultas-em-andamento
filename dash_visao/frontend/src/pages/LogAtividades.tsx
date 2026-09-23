@@ -279,8 +279,21 @@ interface MonitorConfigData {
   updated_at: string | null;
 }
 
+interface MonitorReference {
+  system_name: string;
+  system_key: string;
+  environment: string;
+  effective_url: string;
+  monitor_systems_url: string;
+  frontend_url: string;
+  ingest_key_configured: boolean;
+  registration: { field: string; value: string; note: string }[];
+  config_json: Record<string, unknown>;
+}
+
 function MonitorConfigCard() {
   const [config, setConfig] = useState<MonitorConfigData | null>(null);
+  const [reference, setReference] = useState<MonitorReference | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -291,17 +304,22 @@ function MonitorConfigCard() {
   const [editIngestKey, setEditIngestKey] = useState('');
   const [showIngestKey, setShowIngestKey] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
 
   const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
-      const resp = await api.get('/monitor-config');
-      const data = resp.data;
+      const [cfgResp, refResp] = await Promise.all([
+        api.get('/monitor-config'),
+        api.get('/monitor-config/reference').catch(() => null),
+      ]);
+      const data = cfgResp.data;
       setConfig(data);
       setEditHost(data.host);
       setEditPort(String(data.port));
       setEditEnabled(data.enabled);
       setEditIngestKey('');
+      if (refResp) setReference(refResp.data);
     } catch {
       // Config ainda não existe, será criada na primeira chamada
     } finally {
@@ -328,6 +346,8 @@ function MonitorConfigCard() {
       const resp = await api.put('/monitor-config', payload);
       setConfig(resp.data);
       setEditIngestKey('');
+      const refResp = await api.get('/monitor-config/reference').catch(() => null);
+      if (refResp) setReference(refResp.data);
     } catch (err: any) {
       setTestResult({ success: false, message: err?.response?.data?.detail || 'Erro ao salvar' });
     } finally {
@@ -345,6 +365,17 @@ function MonitorConfigCard() {
       setTestResult({ success: false, message: err?.response?.data?.detail || 'Erro ao testar' });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const copyJson = async () => {
+    if (!reference) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(reference.config_json, null, 2));
+      setCopiedJson(true);
+      window.setTimeout(() => setCopiedJson(false), 2000);
+    } catch {
+      // ignore
     }
   };
 
@@ -530,6 +561,93 @@ function MonitorConfigCard() {
               >
                 {testResult.message}
               </Alert>
+            )}
+
+            {/* Cadastro no Monitor */}
+            {reference && (
+              <Box
+                sx={{
+                  mt: 2.5,
+                  pt: 2,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                  Cadastro no Monitor de Sistemas
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+                  Use estes valores em{' '}
+                  <Typography
+                    component="a"
+                    href={reference.monitor_systems_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="caption"
+                    sx={{ color: 'info.main', fontWeight: 700 }}
+                  >
+                    {reference.monitor_systems_url}
+                  </Typography>
+                  {' '}para cadastrar o Visão. A chave do sistema deve ser{' '}
+                  <strong>{reference.system_key}</strong>.
+                </Typography>
+
+                <TableContainer sx={{ mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700, width: '28%' }}>Campo no Monitor</TableCell>
+                        <TableCell sx={{ fontWeight: 700, width: '32%' }}>Valor</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Observação</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {reference.registration.map((row) => (
+                        <TableRow key={row.field}>
+                          <TableCell sx={{ fontWeight: 600, verticalAlign: 'top' }}>{row.field}</TableCell>
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem', verticalAlign: 'top' }}>
+                            {row.value}
+                          </TableCell>
+                          <TableCell sx={{ color: 'text.secondary', fontSize: '0.8rem', verticalAlign: 'top' }}>
+                            {row.note}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Config JSON
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="info"
+                    startIcon={copiedJson ? <CheckCircleIcon sx={{ fontSize: 16 }} /> : <ContentCopyIcon sx={{ fontSize: 16 }} />}
+                    onClick={copyJson}
+                  >
+                    {copiedJson ? 'Copiado' : 'Copiar JSON'}
+                  </Button>
+                </Box>
+                <Box
+                  component="pre"
+                  sx={{
+                    m: 0,
+                    p: 1.5,
+                    borderRadius: 1,
+                    bgcolor: '#0A0506',
+                    color: '#E8E8E8',
+                    fontSize: '0.75rem',
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    overflow: 'auto',
+                    maxHeight: 280,
+                  }}
+                >
+                  {JSON.stringify(reference.config_json, null, 2)}
+                </Box>
+              </Box>
             )}
           </Box>
         </Collapse>

@@ -19,6 +19,7 @@ import AdminRoute from './components/AdminRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Roles from './pages/Roles';
 import ConsultaIntegrada from './pages/ConsultaIntegrada';
+import ConsultaIntegradaDetalhe from './pages/ConsultaIntegradaDetalhe';
 import Servicos from './pages/Servicos';
 import ConsultaIdentidade from './pages/ConsultaIdentidade';
 import TabelasCentralizadas from './pages/TabelasCentralizadas';
@@ -147,7 +148,18 @@ const theme = createTheme({
     MuiTableRow: {
       styleOverrides: {
         root: {
-          '&:hover': { backgroundColor: 'rgba(141,15,18,0.02)' },
+          transition: 'background-color 0.18s ease, box-shadow 0.18s ease',
+          '& .MuiTableCell-root': {
+            transition: 'color 0.18s ease, border-color 0.18s ease',
+          },
+          'tbody &:hover': {
+            backgroundColor: 'rgba(141,15,18,0.08)',
+            boxShadow: 'inset 4px 0 0 #7A1E26',
+          },
+          'tbody &:hover .MuiTableCell-root': {
+            color: '#0A0506',
+            borderBottomColor: 'rgba(122,30,38,0.16)',
+          },
           '&:last-child td': { borderBottom: 0 },
         },
       },
@@ -236,11 +248,11 @@ function App() {
               <Route
                 path="/add-user"
                 element={
-                  <AdminRoute>
+                  <PermissionRoute requiredPermission="create_users">
                     <Layout>
                       <AddUser />
                     </Layout>
-                  </AdminRoute>
+                  </PermissionRoute>
                 }
               />
               <Route
@@ -308,6 +320,7 @@ function App() {
 
               {/* Serviços com permissão */}
               <Route path="/consulta-integrada" element={<PermissionRoute requiredPermission="view_consulta_integrada"><Layout><ConsultaIntegrada /></Layout></PermissionRoute>} />
+              <Route path="/consulta-integrada/profissional/:id" element={<PermissionRoute requiredPermission="view_consulta_integrada"><Layout><ConsultaIntegradaDetalhe /></Layout></PermissionRoute>} />
               <Route path="/consulta-identidade" element={<PermissionRoute requiredPermission="view_consulta_identidade"><Layout><ConsultaIdentidade /></Layout></PermissionRoute>} />
               <Route path="/tabelas-centralizadas" element={<PermissionRoute requiredPermission="view_tabelas_centralizadas"><Layout><TabelasCentralizadas /></Layout></PermissionRoute>} />
               <Route path="/consulta-rfb" element={<PermissionRoute requiredPermission="view_consulta_rfb"><Layout><ConsultaRFB /></Layout></PermissionRoute>} />

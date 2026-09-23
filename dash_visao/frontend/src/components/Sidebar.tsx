@@ -155,7 +155,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose, collapsed, onToggleCol
   };
 
   // Permissões que exigem perfil Administrador
-  const adminOnlyPermissions = ['view_users', 'create_users', 'edit_users', 'delete_users', 'manage_users'];
+  const adminOnlyPermissions = ['view_users', 'edit_users', 'delete_users', 'manage_users'];
 
   const canSeeMenu = (menu: MenuData): boolean => {
     // Se não tem permissão definida, todos veem

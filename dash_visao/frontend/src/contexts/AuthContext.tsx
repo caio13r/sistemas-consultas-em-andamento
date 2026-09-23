@@ -3,6 +3,7 @@ import { authService } from '../services/authService';
 import { userService, User } from '../services/userService';
 
 interface AuthContextType {
+  isLoading: boolean;
   isAuthenticated: boolean;
   acceptedTerms: boolean;
   user: User | null;
@@ -20,6 +21,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [isLoading, setIsLoading] = useState<boolean>(() => !!localStorage.getItem('token'));
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -46,10 +48,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const token = authService.getToken();
-    if (token) {
-      fetchCurrentUser();
-    }
+    const restoreSession = async () => {
+      const token = authService.getToken();
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      try {
+        await fetchCurrentUser();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    restoreSession();
   }, []);
 
   const login = async (username: string, password: string) => {
@@ -96,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
+      isLoading,
       isAuthenticated,
       acceptedTerms,
       user,
@@ -115,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 const defaultAuth: AuthContextType = {
+  isLoading: false,
   isAuthenticated: false,
   acceptedTerms: false,
   user: null,
